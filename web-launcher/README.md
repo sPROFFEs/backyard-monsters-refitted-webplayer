@@ -1,158 +1,163 @@
-# 🎮 Backyard Monsters Refitted — Web Launcher & Proxy
+# Backyard Monsters Refitted - Web Launcher & Proxy
 
-Este lanzador web permite jugar a **Backyard Monsters Refitted** directamente desde cualquier navegador moderno (Chrome, Firefox, Safari, Edge o navegadores móviles) sin necesidad de instalar clientes de escritorio nativos ni el plugin obsoleto de Flash Player, pudiendo publicarlo fácilmente en internet a través de un **Cloudflare Tunnel** en tu propio servidor.
-
----
-
-## 🌟 Características Principales
-
-1. **Reproducción Web 100% Nativa (Sin plugins de escritorio)**:
-   - Utiliza **Ruffle WebAssembly (AS3)** para emular el cliente ActionScript 3 de Flash directamente en el navegador del usuario con aceleración Canvas/WebGL.
-   - Compatible con ordenadores, tablets y teléfonos móviles.
-
-2. **Modificador de Endpoints y Servidor Dinámico**:
-   - Selector en tiempo real del servidor contra el que deseas jugar:
-     - 🌐 **Servidor Oficial Refitted**: `https://server.bymrefitted.com/`
-     - 🏠 **Servidor Local / Auto-hospedado**: `http://localhost:3001/`
-     - ⚙️ **Servidor Personalizado**: Cualquier URL de un servidor privado comunitario.
-   - **Comprobador de latencia (Ping)**: Mide en milisegundos el estado de respuesta del servidor antes de conectar.
-   - **Garantía de Preservación**: Si los servidores oficiales de los desarrolladores caen o se cierran en el futuro, no pierdes nada; basta con cambiar el endpoint a tu propio servidor privado.
-
-3. **Proxy Inverso Anti-CORS y Anti-Mixed-Content para Cloudflare Tunnel**:
-   - Cuando sirves una web por Cloudflare Tunnel bajo HTTPS (`https://bym.tudominio.com`), los navegadores modernos **bloquean peticiones HTTP inseguras** (Mixed Content) o peticiones entre dominios sin cabeceras CORS.
-   - El lanzador incluye un proxy inverso integrado en el contenedor Docker (`/proxy/server/` y `/proxy/cdn/`) que reenvía el tráfico de manera transparente con las cabeceras CORS adecuadas.
-
-4. **Gestor de Cuentas y Sesión**:
-   - Permite iniciar sesión con correo y contraseña para cargar automáticamente tu aldea.
-   - Soporte para token JWT manual.
-   - Opción *"Jugar con Login In-Game"* para usar la pantalla de login original de Backyard Monsters dentro del juego.
-
-5. **Controles de Juego Integrados**:
-   - ⛶ Pantalla completa nativa (F11 / Botón integrado).
-   - 📏 Modos de escalado: Original (760x670), Adaptado a la ventana manteniendo aspecto, o Pantalla Completa.
-   - 🌐 Selector de idioma (Español, Inglés, Francés, Alemán, Portugués, Turco).
-   - 🔄 Reinicio rápido del juego con un clic.
-   - 🐞 Consola de diagnóstico integrada para depurar errores de red y eventos de Flash.
+This web launcher enables playing **Backyard Monsters Refitted** directly from any modern web browser (Chrome, Firefox, Safari, Edge, or mobile browsers) without requiring desktop client installations or legacy Flash plugins. It is containerized with Docker and ready to be served over a **Cloudflare Tunnel** or reverse proxy on your own server.
 
 ---
 
-## 🚀 Despliegue con Docker (Recomendado)
+## Key Features
 
-### Opción A: Solo el Web Launcher (Conectando a los servidores oficiales o externos)
+1. **In-Browser WebAssembly Runtime (Zero Desktop Plugins)**:
+   - Uses **Ruffle WebAssembly (AVM2 / AS3)** to emulate the ActionScript 3 Flash client directly inside the browser using Canvas and WebGL acceleration.
+   - Fully compatible with desktop PCs, laptops, tablets, and smartphones.
 
-1. En la carpeta raíz del proyecto, ejecuta:
-   ```bash
-   docker compose -f docker-compose.web-launcher.yml up -d
-   ```
-2. Accede en tu navegador a:
-   ```
-   http://localhost:8080
-   ```
+2. **Dynamic Endpoint & Server Modifier**:
+   - Real-time selector to configure which server to authenticate and play against:
+     - **Official Refitted Server (Default)**: `https://server.bymrefitted.com/` (CDN: `https://cdn.bymrefitted.com/`)
+     - **Local / Self-Hosted Server**: `http://localhost:3001/`
+     - **Custom Server**: Custom IP, domain, or community server.
+   - **Real-Time Latency Meter (Ping)**: Tests response times in milliseconds before saving.
+   - **Preservation Guarantee**: If official servers go offline or shut down in the future, your web player remains 100% functional by switching endpoints to your private server without rebuilding or recompiling code.
 
-### Opción B: Full Stack (Tu propio Servidor de Juego + Base de Datos + Redis + Web Launcher)
+3. **Cloudflare Access Gateway & Service Token Support**:
+   - If your backend server is protected behind a **Cloudflare Access (Zero Trust Application)** gate or an authentication proxy, you can specify Service Token credentials:
+     - `CF-Access-Client-Id`
+     - `CF-Access-Client-Secret`
+     - Custom authorization headers (e.g., `Authorization: Bearer <token>`)
+   - The built-in proxy forwards these security headers automatically with every API and asset call.
 
-Si quieres tener tu propio servidor privado 100% independiente en tu máquina:
+4. **CORS & Mixed-Content Reverse Proxy**:
+   - Modern browsers block requests from an HTTPS origin (`https://bym.yourdomain.com`) to non-CORS or plain HTTP backends.
+   - The launcher includes an embedded reverse proxy (`/proxy/server/` and `/proxy/cdn/`) that forwards requests cleanly with permissive CORS headers.
+
+5. **Session & Profile Management**:
+   - Log in using your email and password to load your village automatically.
+   - Direct JWT token authentication support.
+   - Guest / In-game login option to let the Flash client's native authentication handle sign-in.
+
+6. **In-Game Display Controls**:
+   - Native Fullscreen mode.
+   - Aspect ratio scaling: Fitted (aspect ratio preserved), Original (760x670), or Full Screen.
+   - Real-time language selector (English, Spanish, French, German, Portuguese, Turkish).
+   - One-click client restart.
+   - Integrated debug and network console.
+
+---
+
+## Deployment with Docker
+
+### Option A: Web Launcher Only (Connecting to Official or Remote Servers)
+
+```bash
+docker compose -f docker-compose.web-launcher.yml up -d
+```
+
+Open your browser at:
+`http://localhost:8080`
+
+### Option B: Full Stack (Self-Hosted Game Server + Database + Redis + Web Launcher)
+
+To run a completely self-hosted, private backend alongside the web player:
+
 ```bash
 docker compose -f docker-compose.full-stack.yml up -d
 ```
-Esto levantará:
-- Servidor de base de datos PostgreSQL.
-- Servidor de caché y sesiones Redis.
-- Servidor de juego y WebSocket de chat Backyard Monsters (`bymr-api-server`).
-- Web Launcher en el puerto `8080`.
+
+This starts:
+- PostgreSQL database
+- Redis cache & session store
+- Backyard Monsters API server (`:3001`) and WebSocket chat (`:3010`)
+- Web Launcher & Player (`:8080`)
 
 ---
 
-## ☁️ Exponer a través de Cloudflare Tunnel
+## Cloudflare Tunnel Setup
 
-Para jugar desde cualquier lugar a través de tu propio dominio (ej. `https://bym.tudominio.com`):
+To expose the launcher to the internet under your custom domain (e.g., `https://bym.yourdomain.com`):
 
-### Método 1: Desde el panel web de Cloudflare Zero Trust (Más fácil)
-1. Ve a [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) > **Networks** > **Tunnels**.
-2. Haz clic en **Create a Tunnel** y dale un nombre (ej. `bym-tunnel`).
-3. En la sección **Public Hostname**:
-   - **Subdomain**: `bym` (o el que prefieras).
-   - **Domain**: `tudominio.com`.
-   - **Type**: `HTTP`.
-   - **URL**: `web-launcher:8080` (si corre en la misma red Docker) o `localhost:8080`.
-4. Copia el `TUNNEL_TOKEN` que te proporciona Cloudflare.
-5. Puedes agregarlo a tu `.env` como `CLOUDFLARE_TUNNEL_TOKEN=ey...` y correr:
+### Method 1: Cloudflare Zero Trust Dashboard (Recommended)
+1. Go to [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) > **Networks** > **Tunnels**.
+2. Click **Create a Tunnel** and enter a name (e.g. `bym-tunnel`).
+3. Under **Public Hostname**:
+   - **Subdomain**: `bym`
+   - **Domain**: `yourdomain.com`
+   - **Type**: `HTTP`
+   - **URL**: `web-launcher:8080` (if running in the same Docker network) or `localhost:8080`.
+4. Copy the `TUNNEL_TOKEN`.
+5. Run the container with tunnel enabled:
    ```bash
-   docker compose -f docker-compose.web-launcher.yml --profile tunnel up -d
+   CLOUDFLARE_TUNNEL_TOKEN="your_token_here" docker compose -f docker-compose.web-launcher.yml --profile tunnel up -d
    ```
-   ¡Y listo! Tu juego web estará disponible de inmediato bajo HTTPS con certificado SSL automático.
 
-### Método 2: Con `cloudflared` instalado en tu servidor
-En tu archivo de configuración de Cloudflare (`config.yml`):
+### Method 2: Local `cloudflared` CLI
+In your `config.yml`:
 ```yaml
-tunnel: <TUNNEL_UUID>
-credentials-file: /root/.cloudflared/<TUNNEL_UUID>.json
-
 ingress:
-  - hostname: bym.tudominio.com
+  - hostname: bym.yourdomain.com
     service: http://localhost:8080
     originRequest:
       noTLSVerify: true
   - service: http_status:404
 ```
-Ejecuta:
+Run:
 ```bash
 cloudflared tunnel run
 ```
 
 ---
 
-## 🛠️ Ejecución Local para Desarrollo (Sin Docker)
+## Backend Protected by Cloudflare Access
 
-Si deseas probar o modificar el lanzador en tu máquina local:
+If your backend is behind Cloudflare Access (Cloudflare Zero Trust application gate requiring a Service Token):
 
-1. Entra en la carpeta del lanzador:
+1. Generate a Service Token in Cloudflare Zero Trust: **Access** > **Service Auth** > **Create Service Token**.
+2. In the Web Launcher:
+   - Click **Server / Endpoints** in the top navigation bar.
+   - Expand **Access Gateway / Cloudflare Access (Optional)**.
+   - Fill in:
+     - `CF-Access-Client-Id`
+     - `CF-Access-Client-Secret`
+   - Click **Save & Connect**.
+3. Or pass them as environment variables in `docker-compose.yml`:
+   ```yaml
+   environment:
+     - CF_ACCESS_CLIENT_ID=your_client_id.access
+     - CF_ACCESS_CLIENT_SECRET=your_client_secret
+   ```
+
+---
+
+## Local Development (Without Docker)
+
+1. Enter the launcher directory:
    ```bash
    cd web-launcher
    ```
-2. Instala las dependencias:
+2. Install dependencies:
    ```bash
    npm install
    ```
-3. Inicia el servidor:
+3. Start the server:
    ```bash
    node server.js
    ```
-   o con Bun:
-   ```bash
-   bun server.js
-   ```
-4. Abre `http://localhost:8080` en tu navegador.
+4. Open `http://localhost:8080` in your browser.
 
 ---
 
-## 📁 Estructura del Proyecto Web Launcher
+## Project Structure
 
 ```
 web-launcher/
-├── Dockerfile                  # Imagen Docker optimizada (Node 20 Alpine)
-├── docker-compose.yml          # Compose standalone para el launcher
-├── package.json                # Dependencias (Express, CORS, Ruffle)
-├── server.js                   # Servidor web y reverse proxy dinámico
-├── public/                     # Archivos servidos al navegador
-│   ├── index.html              # Interfaz de usuario del lanzador
-│   ├── app.js                  # Lógica del cliente, selector de servidor y Ruffle
-│   ├── styles.css              # Tema visual oscuro inspirado en BYM
-│   ├── swfs/                   # Binarios SWF del cliente de juego
-│   │   └── bymr-client.swf     # Cliente ActionScript 3 (v128.5690)
+├── Dockerfile                  # Container definition (Node 20 Alpine)
+├── docker-compose.yml          # Standalone compose file
+├── package.json                # Dependencies (Express, CORS, Ruffle)
+├── server.js                   # Web server, reverse proxy, and gateway handler
+├── public/                     # Static web assets
+│   ├── index.html              # Web launcher user interface
+│   ├── app.js                  # Client state, endpoint switcher, and Ruffle loader
+│   ├── styles.css              # Dark strategy game UI theme
+│   ├── swfs/                   # Flash game binaries
+│   │   └── bymr-client.swf     # Reconstructed ActionScript 3 client (v128.5690)
 │   └── vendor/
-│       └── ruffle/             # Motor WebAssembly de Flash Player
+│       └── ruffle/             # Self-hosted Ruffle WebAssembly runtime
 ```
-
----
-
-## ❓ Preguntas Frecuentes
-
-### ¿El juego se conecta a los servidores que ellos mantienen?
-**Sí**. Por defecto viene configurado apuntando a `https://server.bymrefitted.com/` y su CDN oficial `https://cdn.bymrefitted.com/`. Todas las partidas, progreso, clanes y ataques se comunican directamente con sus servidores.
-
-### ¿Qué pasa si cierran o cambian de servidor?
-Haces clic en el botón superior **"⚙️ Servidor / Endpoints"**, eliges **"Personalizado"**, introduces la nueva URL de tu propio servidor (o el de la comunidad) y pulsas **"Guardar"**. Tu juego continuará funcionando sin tener que volver a compilar nada.
-
-### ¿Por qué se recomienda el "Modo Proxy Docker"?
-Al publicar tu web con Cloudflare Tunnel bajo `https://`, tu navegador aplicará políticas estrictas de seguridad (CORS y Mixed-Content). El modo proxy hace que las llamadas salgan desde el servidor Docker hacia el backend del juego, devolviendo respuestas limpias al navegador sin bloqueos.

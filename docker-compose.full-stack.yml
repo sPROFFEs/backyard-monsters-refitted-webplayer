@@ -9,9 +9,7 @@ networks:
     driver: bridge
 
 services:
-  # ─────────────────────────────────────────────────────────────
-  # 🎮 Web Launcher & In-Browser Player
-  # ─────────────────────────────────────────────────────────────
+  # Web Launcher & In-Browser Player
   web-launcher:
     build:
       context: ./web-launcher
@@ -24,14 +22,14 @@ services:
       - PORT=8080
       - DEFAULT_SERVER_URL=${DEFAULT_SERVER_URL:-http://web:3001/}
       - DEFAULT_CDN_URL=${DEFAULT_CDN_URL:-http://web:3001/}
+      - CF_ACCESS_CLIENT_ID=${CF_ACCESS_CLIENT_ID:-}
+      - CF_ACCESS_CLIENT_SECRET=${CF_ACCESS_CLIENT_SECRET:-}
     networks:
       - bymr-net
     depends_on:
       - web
 
-  # ─────────────────────────────────────────────────────────────
-  # 🖥️ Backyard Monsters API Server (Bun + Koa)
-  # ─────────────────────────────────────────────────────────────
+  # Backyard Monsters API Server (Bun + Koa)
   web:
     build:
       context: ./server
@@ -66,9 +64,7 @@ services:
       db-init:
         condition: service_completed_successfully
 
-  # ─────────────────────────────────────────────────────────────
-  # 🗄️ Database Initialization (Runs once to seed/migrate)
-  # ─────────────────────────────────────────────────────────────
+  # Database Initialization (Runs once to seed/migrate)
   db-init:
     build:
       context: ./server
@@ -87,9 +83,7 @@ services:
     command: bun run db:init
     restart: "no"
 
-  # ─────────────────────────────────────────────────────────────
-  # 🐘 PostgreSQL Database
-  # ─────────────────────────────────────────────────────────────
+  # PostgreSQL Database
   db:
     image: postgres:18.1-alpine
     container_name: bymr-database
@@ -108,9 +102,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─────────────────────────────────────────────────────────────
-  # ⚡ Redis Cache & Session Store
-  # ─────────────────────────────────────────────────────────────
+  # Redis Cache & Session Store
   redis:
     image: redis:alpine
     container_name: bymr-redis
@@ -123,9 +115,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ─────────────────────────────────────────────────────────────
-  # ☁️ Cloudflare Tunnel (Optional, activated with --profile tunnel)
-  # ─────────────────────────────────────────────────────────────
+  # Cloudflare Tunnel (Optional, activated with --profile tunnel)
   cloudflare-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: bymr-cloudflare-tunnel

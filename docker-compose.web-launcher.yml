@@ -13,6 +13,8 @@ services:
       - PORT=8080
       - DEFAULT_SERVER_URL=${DEFAULT_SERVER_URL:-https://server.bymrefitted.com/}
       - DEFAULT_CDN_URL=${DEFAULT_CDN_URL:-https://cdn.bymrefitted.com/}
+      - CF_ACCESS_CLIENT_ID=${CF_ACCESS_CLIENT_ID:-}
+      - CF_ACCESS_CLIENT_SECRET=${CF_ACCESS_CLIENT_SECRET:-}
     volumes:
       - ./web-launcher/public/swfs:/app/public/swfs:ro
 

@@ -8,8 +8,11 @@
     cdnUrl: localStorage.getItem("bymr_cdn_url") || "https://cdn.bymrefitted.com/",
     proxyMode: localStorage.getItem("bymr_proxy_mode") || "proxy",
     token: localStorage.getItem("bymr_auth_token") || "",
+    cfClientId: localStorage.getItem("bymr_cf_client_id") || "",
+    cfClientSecret: localStorage.getItem("bymr_cf_client_secret") || "",
+    customAuthHeader: localStorage.getItem("bymr_custom_auth_header") || "",
     userProfile: null,
-    language: localStorage.getItem("bymr_language") || "spanish",
+    language: localStorage.getItem("bymr_language") || "english",
     scale: localStorage.getItem("bymr_scale") || "fitted",
     preset: localStorage.getItem("bymr_preset") || "official",
     rufflePlayer: null,
@@ -60,8 +63,15 @@
     btnCloseSettings: document.getElementById("btnCloseSettings"),
     btnCancelSettings: document.getElementById("btnCancelSettings"),
     btnSaveSettings: document.getElementById("btnSaveSettings"),
+    btnResetOfficial: document.getElementById("btnResetOfficial"),
     inputServerUrl: document.getElementById("inputServerUrl"),
     inputCdnUrl: document.getElementById("inputCdnUrl"),
+    inputCfClientId: document.getElementById("inputCfClientId"),
+    inputCfClientSecret: document.getElementById("inputCfClientSecret"),
+    inputCustomAuthHeader: document.getElementById("inputCustomAuthHeader"),
+    gatewayToggle: document.getElementById("gatewayToggle"),
+    gatewayToggleArrow: document.getElementById("gatewayToggleArrow"),
+    gatewayContent: document.getElementById("gatewayContent"),
     btnTestConnection: document.getElementById("btnTestConnection"),
     testResultText: document.getElementById("testResultText"),
     presetCards: document.querySelectorAll(".preset-card"),
@@ -100,21 +110,52 @@
     return url.endsWith("/") ? url : url + "/";
   }
 
-  // Set cookies for Docker reverse proxy
+  // Set cookies for Docker reverse proxy including Cloudflare Access headers
   function updateProxyCookies() {
     document.cookie = `bymr_target_server=${encodeURIComponent(state.serverUrl)}; path=/; max-age=31536000; SameSite=Lax`;
     document.cookie = `bymr_target_cdn=${encodeURIComponent(state.cdnUrl)}; path=/; max-age=31536000; SameSite=Lax`;
-    log(`Cookies de destino actualizadas: server=${state.serverUrl}`, "info");
+    
+    if (state.cfClientId) {
+      document.cookie = `bymr_cf_client_id=${encodeURIComponent(state.cfClientId)}; path=/; max-age=31536000; SameSite=Lax`;
+    } else {
+      document.cookie = "bymr_cf_client_id=; path=/; max-age=0";
+    }
+
+    if (state.cfClientSecret) {
+      document.cookie = `bymr_cf_client_secret=${encodeURIComponent(state.cfClientSecret)}; path=/; max-age=31536000; SameSite=Lax`;
+    } else {
+      document.cookie = "bymr_cf_client_secret=; path=/; max-age=0";
+    }
+
+    if (state.customAuthHeader) {
+      document.cookie = `bymr_custom_auth_header=${encodeURIComponent(state.customAuthHeader)}; path=/; max-age=31536000; SameSite=Lax`;
+    } else {
+      document.cookie = "bymr_custom_auth_header=; path=/; max-age=0";
+    }
+
+    log(`Proxy target updated: server=${state.serverUrl}`, "info");
+    if (state.cfClientId) {
+      log("Cloudflare Access Service Token attached to proxy headers", "info");
+    }
   }
 
   // Ping server and update UI badge
   async function pingServer(targetUrl = state.serverUrl) {
     elements.statusDot.className = "status-dot status-checking";
-    elements.currentEndpointDisplay.textContent = new URL(targetUrl).hostname;
+    try {
+      elements.currentEndpointDisplay.textContent = new URL(targetUrl).hostname;
+    } catch (e) {
+      elements.currentEndpointDisplay.textContent = targetUrl;
+    }
     elements.pingDisplay.textContent = "...";
 
     try {
-      const res = await fetch(`/api/launcher/ping?target=${encodeURIComponent(targetUrl)}`);
+      const headers = {};
+      if (state.cfClientId) headers["x-cf-access-client-id"] = state.cfClientId;
+      if (state.cfClientSecret) headers["x-cf-access-client-secret"] = state.cfClientSecret;
+      if (state.customAuthHeader) headers["x-custom-auth-header"] = state.customAuthHeader;
+
+      const res = await fetch(`/api/launcher/ping?target=${encodeURIComponent(targetUrl)}`, { headers });
       const data = await res.json();
 
       if (data.ok) {
@@ -122,20 +163,20 @@
         state.pingMs = data.latencyMs;
         elements.statusDot.className = "status-dot status-online";
         elements.pingDisplay.textContent = `${data.latencyMs} ms`;
-        log(`Ping a ${targetUrl} OK (${data.latencyMs}ms)`, "success");
+        log(`Ping to ${targetUrl} successful (${data.latencyMs}ms)`, "success");
         return { ok: true, latency: data.latencyMs };
       } else {
         state.serverOnline = false;
         elements.statusDot.className = "status-dot status-offline";
         elements.pingDisplay.textContent = "Offline";
-        log(`Ping a ${targetUrl} falló: ${data.error || "Código HTTP " + data.statusCode}`, "warn");
+        log(`Ping to ${targetUrl} failed: ${data.error || "HTTP " + data.statusCode}`, "warn");
         return { ok: false, error: data.error || `HTTP ${data.statusCode}` };
       }
     } catch (err) {
       state.serverOnline = false;
       elements.statusDot.className = "status-dot status-offline";
       elements.pingDisplay.textContent = "Error";
-      log(`Error al contactar proxy de ping: ${err.message}`, "error");
+      log(`Error contacting ping proxy: ${err.message}`, "error");
       return { ok: false, error: err.message };
     }
   }
@@ -145,13 +186,13 @@
     if (state.token && state.userProfile) {
       elements.userPill.classList.remove("hidden");
       elements.btnOpenAuth.classList.add("hidden");
-      elements.userPillName.textContent = state.userProfile.username || "Jugador";
-      elements.userPill.title = `ID: ${state.userProfile.userId || state.userProfile.userid} | Nivel: ${state.userProfile.level || 1}`;
+      elements.userPillName.textContent = state.userProfile.username || "Player";
+      elements.userPill.title = `ID: ${state.userProfile.userId || state.userProfile.userid} | Level: ${state.userProfile.level || 1}`;
     } else if (state.token) {
       elements.userPill.classList.remove("hidden");
       elements.btnOpenAuth.classList.add("hidden");
-      elements.userPillName.textContent = "Token Activo";
-      elements.userPill.title = "Sesión iniciada con token directo";
+      elements.userPillName.textContent = "Token Active";
+      elements.userPill.title = "Logged in using direct session token";
     } else {
       elements.userPill.classList.add("hidden");
       elements.btnOpenAuth.classList.remove("hidden");
@@ -171,14 +212,14 @@
     if (!document.fullscreenElement) {
       elements.playerWrapper.requestFullscreen().then(() => {
         document.body.classList.add("is-fullscreen");
-        elements.fullscreenIcon.textContent = "🗗";
+        elements.fullscreenIcon.textContent = "[X]";
       }).catch(err => {
-        log(`Error al entrar a pantalla completa: ${err.message}`, "error");
+        log(`Error entering fullscreen: ${err.message}`, "error");
       });
     } else {
       document.exitFullscreen().then(() => {
         document.body.classList.remove("is-fullscreen");
-        elements.fullscreenIcon.textContent = "⛶";
+        elements.fullscreenIcon.textContent = "[ ]";
       });
     }
   }
@@ -186,18 +227,18 @@
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) {
       document.body.classList.remove("is-fullscreen");
-      elements.fullscreenIcon.textContent = "⛶";
+      elements.fullscreenIcon.textContent = "[ ]";
     }
   });
 
   // Launch or Reload Flash Game with Ruffle
   async function launchGame() {
-    log("Iniciando carga del cliente Backyard Monsters...", "info");
+    log("Starting Backyard Monsters client...", "info");
     updateProxyCookies();
 
     // Show loading splash
     elements.loadingSplash.classList.remove("hidden");
-    elements.splashStatusText.textContent = "Iniciando Ruffle Flash Emulator...";
+    elements.splashStatusText.textContent = "Initializing Ruffle Flash emulator...";
 
     // Determine effective server and cdn URLs
     let effectiveServerUrl;
@@ -206,17 +247,17 @@
     if (state.proxyMode === "proxy") {
       effectiveServerUrl = ensureTrailingSlash(window.location.origin + "/proxy/server");
       effectiveCdnUrl = ensureTrailingSlash(window.location.origin + "/proxy/cdn");
-      elements.connectionModeTag.textContent = "Modo: Proxy Docker";
+      elements.connectionModeTag.textContent = "Mode: Docker Proxy";
       elements.connectionModeTag.style.borderColor = "rgba(59, 130, 246, 0.4)";
     } else {
       effectiveServerUrl = ensureTrailingSlash(state.serverUrl);
       effectiveCdnUrl = ensureTrailingSlash(state.cdnUrl);
-      elements.connectionModeTag.textContent = "Modo: Conexión Directa";
+      elements.connectionModeTag.textContent = "Mode: Direct Connection";
       elements.connectionModeTag.style.borderColor = "rgba(16, 185, 129, 0.4)";
     }
 
-    log(`Endpoint del juego: ${effectiveServerUrl}`, "info");
-    log(`Endpoint del CDN: ${effectiveCdnUrl}`, "info");
+    log(`Game API Endpoint: ${effectiveServerUrl}`, "info");
+    log(`Asset CDN Endpoint: ${effectiveCdnUrl}`, "info");
 
     // Clear previous Ruffle Player
     if (state.rufflePlayer) {
@@ -228,11 +269,11 @@
 
     // Check if Ruffle is loaded
     if (!window.RufflePlayer) {
-      elements.splashStatusText.textContent = "Descargando motor Ruffle WebAssembly...";
+      elements.splashStatusText.textContent = "Downloading Ruffle WebAssembly runtime...";
       await new Promise(resolve => setTimeout(resolve, 500));
       if (!window.RufflePlayer) {
-        elements.splashStatusText.textContent = "Error: no se pudo cargar Ruffle. Revisa la consola.";
-        log("No se encontró window.RufflePlayer en la página", "error");
+        elements.splashStatusText.textContent = "Error: Ruffle could not be loaded. Check console.";
+        log("window.RufflePlayer not found on page", "error");
         return;
       }
     }
@@ -255,7 +296,7 @@
           serverUrl: effectiveServerUrl,
           cdnUrl: effectiveCdnUrl,
           token: state.token || "",
-          language: state.language || "spanish"
+          language: state.language || "english"
         }
       };
 
@@ -263,7 +304,7 @@
       elements.ruffleContainer.appendChild(player);
 
       // Load SWF
-      elements.splashStatusText.textContent = "Descargando ejecutable SWF (v128.5690)...";
+      elements.splashStatusText.textContent = "Loading client SWF binary (v128.5690)...";
       await player.load({
         url: "/swfs/bymr-client.swf",
         parameters: player.config.parameters
@@ -271,16 +312,15 @@
 
       // Hide loading splash on load
       elements.loadingSplash.classList.add("hidden");
-      log("¡Cliente SWF cargado exitosamente en Ruffle!", "success");
+      log("Client SWF loaded successfully in Ruffle", "success");
 
-      // Log Ruffle events if available
       player.addEventListener("loadedmetadata", () => {
-        log(`Metadatos del SWF recibidos: ${player.metadata?.width}x${player.metadata?.height} @ ${player.metadata?.frameRate} FPS`, "info");
+        log(`SWF metadata: ${player.metadata?.width}x${player.metadata?.height} @ ${player.metadata?.frameRate} FPS`, "info");
       });
 
     } catch (err) {
-      elements.splashStatusText.textContent = `Error al cargar juego: ${err.message}`;
-      log(`Error crítico al montar Ruffle: ${err.message}`, "error");
+      elements.splashStatusText.textContent = `Error loading game: ${err.message}`;
+      log(`Error mounting Ruffle: ${err.message}`, "error");
     }
   }
 
@@ -314,6 +354,9 @@
   elements.btnOpenSettings.addEventListener("click", () => {
     elements.inputServerUrl.value = state.serverUrl;
     elements.inputCdnUrl.value = state.cdnUrl;
+    elements.inputCfClientId.value = state.cfClientId || "";
+    elements.inputCfClientSecret.value = state.cfClientSecret || "";
+    elements.inputCustomAuthHeader.value = state.customAuthHeader || "";
     elements.testResultText.textContent = "";
 
     // Set radio
@@ -329,12 +372,19 @@
   elements.btnCancelSettings.addEventListener("click", () => elements.settingsModal.classList.add("hidden"));
 
   // Reset to official default button
-  const btnResetOfficial = document.getElementById("btnResetOfficial");
-  if (btnResetOfficial) {
-    btnResetOfficial.addEventListener("click", () => {
+  if (elements.btnResetOfficial) {
+    elements.btnResetOfficial.addEventListener("click", () => {
       applyPreset("official");
       elements.testResultText.textContent = "";
-      log("Restaurado servidor oficial por defecto (bymrefitted.com)", "info");
+      log("Reset to default official server (bymrefitted.com)", "info");
+    });
+  }
+
+  // Gateway box accordion toggle
+  if (elements.gatewayToggle) {
+    elements.gatewayToggle.addEventListener("click", () => {
+      elements.gatewayContent.classList.toggle("hidden");
+      elements.gatewayToggleArrow.textContent = elements.gatewayContent.classList.contains("hidden") ? "+" : "-";
     });
   }
 
@@ -356,15 +406,20 @@
     if (!testUrl) return;
 
     elements.testResultText.className = "test-result";
-    elements.testResultText.textContent = "Comprobando conexión...";
+    elements.testResultText.textContent = "Testing connection...";
+
+    // Temporarily apply current gateway inputs for test
+    state.cfClientId = elements.inputCfClientId.value.trim();
+    state.cfClientSecret = elements.inputCfClientSecret.value.trim();
+    state.customAuthHeader = elements.inputCustomAuthHeader.value.trim();
 
     const res = await pingServer(testUrl);
     if (res.ok) {
       elements.testResultText.className = "test-result test-success";
-      elements.testResultText.textContent = `✓ Conexión exitosa (${res.latency} ms)`;
+      elements.testResultText.textContent = `Connection successful (${res.latency} ms)`;
     } else {
       elements.testResultText.className = "test-result test-error";
-      elements.testResultText.textContent = `✕ No disponible (${res.error})`;
+      elements.testResultText.textContent = `Unreachable (${res.error})`;
     }
   });
 
@@ -376,20 +431,27 @@
     elements.proxyRadios.forEach(r => { if (r.checked) selectedMode = r.value; });
 
     if (!newServer) {
-      alert("Por favor ingresa una URL de servidor válida.");
+      alert("Please enter a valid server URL.");
       return;
     }
 
     state.serverUrl = newServer;
     state.cdnUrl = newCdn;
     state.proxyMode = selectedMode;
+    state.cfClientId = elements.inputCfClientId.value.trim();
+    state.cfClientSecret = elements.inputCfClientSecret.value.trim();
+    state.customAuthHeader = elements.inputCustomAuthHeader.value.trim();
+
     localStorage.setItem("bymr_server_url", newServer);
     localStorage.setItem("bymr_cdn_url", newCdn);
     localStorage.setItem("bymr_proxy_mode", selectedMode);
     localStorage.setItem("bymr_preset", state.preset);
+    localStorage.setItem("bymr_cf_client_id", state.cfClientId);
+    localStorage.setItem("bymr_cf_client_secret", state.cfClientSecret);
+    localStorage.setItem("bymr_custom_auth_header", state.customAuthHeader);
 
     elements.settingsModal.classList.add("hidden");
-    log(`Configuración guardada. Servidor: ${newServer} [${selectedMode}]`, "success");
+    log(`Settings saved. Server: ${newServer} [${selectedMode}]`, "success");
 
     pingServer();
     launchGame();
@@ -420,10 +482,10 @@
     const email = elements.authEmail.value.trim();
     const password = elements.authPassword.value;
 
-    log(`Intentando autenticar usuario ${email} en ${state.serverUrl}...`, "info");
+    log(`Authenticating user ${email} against ${state.serverUrl}...`, "info");
     const submitBtn = document.getElementById("btnSubmitLogin");
     submitBtn.disabled = true;
-    submitBtn.textContent = "Verificando...";
+    submitBtn.textContent = "Verifying...";
 
     try {
       const res = await fetch("/api/launcher/login", {
@@ -433,13 +495,16 @@
           serverUrl: state.serverUrl,
           email,
           password,
-          sessionType: "game"
+          sessionType: "game",
+          cfClientId: state.cfClientId,
+          cfClientSecret: state.cfClientSecret,
+          customAuthHeader: state.customAuthHeader
         })
       });
 
       const data = await res.json();
       submitBtn.disabled = false;
-      submitBtn.textContent = "Iniciar Sesión y Jugar";
+      submitBtn.textContent = "Sign In & Play";
 
       if (data.token) {
         state.token = data.token;
@@ -449,21 +514,21 @@
           localStorage.setItem("bymr_user_profile", JSON.stringify(data));
         }
 
-        log(`¡Sesión iniciada con éxito! Usuario: ${data.username} (ID: ${data.userId || data.userid})`, "success");
+        log(`Logged in successfully! User: ${data.username} (ID: ${data.userId || data.userid})`, "success");
         updateAuthUI();
         elements.authModal.classList.add("hidden");
         launchGame();
       } else {
-        elements.authErrorMsg.textContent = data.message || "Credenciales incorrectas o usuario no encontrado.";
+        elements.authErrorMsg.textContent = data.message || "Invalid credentials or user not found.";
         elements.authErrorMsg.classList.remove("hidden");
-        log(`Error de autenticación: ${elements.authErrorMsg.textContent}`, "warn");
+        log(`Authentication error: ${elements.authErrorMsg.textContent}`, "warn");
       }
     } catch (err) {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Iniciar Sesión y Jugar";
-      elements.authErrorMsg.textContent = `Error de conexión: ${err.message}`;
+      submitBtn.textContent = "Sign In & Play";
+      elements.authErrorMsg.textContent = `Connection error: ${err.message}`;
       elements.authErrorMsg.classList.remove("hidden");
-      log(`Error en llamada de login: ${err.message}`, "error");
+      log(`Login request failed: ${err.message}`, "error");
     }
   });
 
@@ -478,7 +543,7 @@
     localStorage.setItem("bymr_auth_token", token);
     updateAuthUI();
     elements.authModal.classList.add("hidden");
-    log("Token JWT aplicado manualmente", "success");
+    log("Direct JWT session token applied", "success");
     launchGame();
   });
 
@@ -492,19 +557,19 @@
     localStorage.removeItem("bymr_user_profile");
     updateAuthUI();
     elements.authModal.classList.add("hidden");
-    log("Iniciando modo invitado / login in-game", "info");
+    log("Starting guest / in-game authentication mode", "info");
     launchGame();
   });
 
   // Logout
   elements.btnLogout.addEventListener("click", () => {
-    if (confirm("¿Deseas cerrar sesión en este launcher?")) {
+    if (confirm("Do you want to log out from this web launcher?")) {
       state.token = "";
       state.userProfile = null;
       localStorage.removeItem("bymr_auth_token");
       localStorage.removeItem("bymr_user_profile");
       updateAuthUI();
-      log("Sesión cerrada", "info");
+      log("Logged out", "info");
       launchGame();
     }
   });
@@ -517,13 +582,13 @@
   elements.langSelect.addEventListener("change", (e) => {
     state.language = e.target.value;
     localStorage.setItem("bymr_language", state.language);
-    log(`Idioma cambiado a: ${state.language}. Reiniciando cliente...`, "info");
+    log(`Language changed to: ${state.language}. Reloading client...`, "info");
     launchGame();
   });
 
   // Reload Button
   elements.btnReloadGame.addEventListener("click", () => {
-    log("Reiniciando juego a petición del usuario...", "info");
+    log("Reloading game instance...", "info");
     launchGame();
   });
 
@@ -544,7 +609,7 @@
 
   // Initialization
   async function init() {
-    log("Iniciando Backyard Monsters Refitted Web Launcher...", "info");
+    log("Initializing Backyard Monsters Refitted Web Launcher...", "info");
     applyScale(state.scale);
     updateAuthUI();
 
@@ -552,9 +617,9 @@
     try {
       const configRes = await fetch("/api/launcher/config");
       const config = await configRes.json();
-      log(`Configuración del servidor cargada. Servidor por defecto: ${config.defaultServerUrl}`, "info");
+      log(`Server config loaded. Default server: ${config.defaultServerUrl}`, "info");
     } catch (e) {
-      log("Aviso: No se pudo obtener /api/launcher/config, usando valores locales", "warn");
+      log("Notice: Could not fetch /api/launcher/config, using local defaults", "warn");
     }
 
     // Ping server

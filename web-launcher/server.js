@@ -10,6 +10,8 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const DEFAULT_SERVER_URL = process.env.DEFAULT_SERVER_URL || "https://server.bymrefitted.com/";
 const DEFAULT_CDN_URL = process.env.DEFAULT_CDN_URL || "https://cdn.bymrefitted.com/";
+const DEFAULT_CF_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID || "";
+const DEFAULT_CF_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET || "";
 
 // Enable permissive CORS
 app.use(cors({
@@ -19,7 +21,7 @@ app.use(cors({
   credentials: false
 }));
 
-// Simple cookie parser helper
+// Cookie parser helper
 function parseCookies(cookieHeader) {
   const cookies = {};
   if (!cookieHeader) return cookies;
@@ -55,25 +57,26 @@ if (fs.existsSync(ruffleNodeModules)) {
   }));
 }
 
-// API: Config
+// API: Configuration
 app.get("/api/launcher/config", (req, res) => {
   res.json({
     defaultServerUrl: DEFAULT_SERVER_URL,
     defaultCdnUrl: DEFAULT_CDN_URL,
+    hasDefaultCfAccess: Boolean(DEFAULT_CF_CLIENT_ID && DEFAULT_CF_CLIENT_SECRET),
     availableServers: [
       {
         id: "official",
-        name: "Servidor Oficial Refitted",
+        name: "Official Refitted Server",
         serverUrl: "https://server.bymrefitted.com/",
         cdnUrl: "https://cdn.bymrefitted.com/",
-        description: "Servidores públicos mantenidos por el equipo de BYM Refitted"
+        description: "Official public servers maintained by the BYM Refitted team"
       },
       {
         id: "local",
-        name: "Servidor Local / Auto-hospedado",
+        name: "Local / Self-Hosted Server",
         serverUrl: "http://localhost:3001/",
         cdnUrl: "http://localhost:3001/",
-        description: "Servidor corriendo en tu misma máquina o red local"
+        description: "Private backend server running on your machine or local network"
       }
     ]
   });
@@ -87,6 +90,34 @@ function resolveTargetUrl(req, defaultUrl, cookieKey) {
   return target;
 }
 
+// Helper function to resolve Cloudflare Access and custom gateway headers
+function resolveGatewayHeaders(req) {
+  const cookies = parseCookies(req.headers.cookie);
+  const headers = {};
+
+  const cfClientId = req.headers["x-cf-access-client-id"] || cookies["bymr_cf_client_id"] || DEFAULT_CF_CLIENT_ID;
+  const cfClientSecret = req.headers["x-cf-access-client-secret"] || cookies["bymr_cf_client_secret"] || DEFAULT_CF_CLIENT_SECRET;
+
+  if (cfClientId) {
+    headers["CF-Access-Client-Id"] = cfClientId;
+  }
+  if (cfClientSecret) {
+    headers["CF-Access-Client-Secret"] = cfClientSecret;
+  }
+
+  const customAuth = req.headers["x-custom-auth-header"] || cookies["bymr_custom_auth_header"];
+  if (customAuth) {
+    const colonIdx = customAuth.indexOf(":");
+    if (colonIdx > 0) {
+      const key = customAuth.substring(0, colonIdx).trim();
+      const val = customAuth.substring(colonIdx + 1).trim();
+      if (key && val) headers[key] = val;
+    }
+  }
+
+  return headers;
+}
+
 // API: Ping target server
 app.get("/api/launcher/ping", async (req, res) => {
   const target = req.query.target || DEFAULT_SERVER_URL;
@@ -95,12 +126,14 @@ app.get("/api/launcher/ping", async (req, res) => {
   try {
     const targetUrl = new URL(target.endsWith("/") ? target + "connection" : target + "/connection");
     const client = targetUrl.protocol === "https:" ? https : http;
+    const gatewayHeaders = resolveGatewayHeaders(req);
 
     const request = client.request(targetUrl, {
       method: "GET",
       timeout: 5000,
       headers: {
-        "User-Agent": "BYMR-Web-Launcher/1.0"
+        "User-Agent": "BYMR-Web-Launcher/1.0",
+        ...gatewayHeaders
       }
     }, (response) => {
       const latency = Date.now() - startTime;
@@ -125,7 +158,7 @@ app.get("/api/launcher/ping", async (req, res) => {
       request.destroy();
       res.json({
         ok: false,
-        error: "Timeout al conectar al servidor",
+        error: "Connection timeout to remote server",
         latencyMs: 5000,
         target: target
       });
@@ -135,7 +168,7 @@ app.get("/api/launcher/ping", async (req, res) => {
   } catch (err) {
     res.json({
       ok: false,
-      error: "URL inválida: " + err.message,
+      error: "Invalid URL: " + err.message,
       latencyMs: 0,
       target: target
     });
@@ -147,7 +180,7 @@ const jsonParser = express.json({ limit: "10mb" });
 
 // API: Proxy login
 app.post("/api/launcher/login", jsonParser, async (req, res) => {
-  const { serverUrl, email, password, token, sessionType = "game" } = req.body;
+  const { serverUrl, email, password, token, sessionType = "game", cfClientId, cfClientSecret, customAuthHeader } = req.body;
   const targetServer = (serverUrl || DEFAULT_SERVER_URL).replace(/\/$/, "");
   const loginUrl = `${targetServer}/api/v1.9.2-beta/player/getinfo`;
 
@@ -155,13 +188,22 @@ app.post("/api/launcher/login", jsonParser, async (req, res) => {
     const parsedUrl = new URL(loginUrl);
     const client = parsedUrl.protocol === "https:" ? https : http;
     const payload = JSON.stringify({ email, password, token, sessionType });
+    const gatewayHeaders = resolveGatewayHeaders(req);
+
+    if (cfClientId) gatewayHeaders["CF-Access-Client-Id"] = cfClientId;
+    if (cfClientSecret) gatewayHeaders["CF-Access-Client-Secret"] = cfClientSecret;
+    if (customAuthHeader && customAuthHeader.includes(":")) {
+      const [k, ...v] = customAuthHeader.split(":");
+      gatewayHeaders[k.trim()] = v.join(":").trim();
+    }
 
     const proxyReq = client.request(parsedUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(payload),
-        "User-Agent": "BYMR-Web-Launcher/1.0"
+        "User-Agent": "BYMR-Web-Launcher/1.0",
+        ...gatewayHeaders
       },
       timeout: 10000
     }, (proxyRes) => {
@@ -178,27 +220,25 @@ app.post("/api/launcher/login", jsonParser, async (req, res) => {
     });
 
     proxyReq.on("error", (err) => {
-      res.status(502).json({ error: 1, message: "Error conectando al servidor de autenticación: " + err.message });
+      res.status(502).json({ error: 1, message: "Error connecting to auth server: " + err.message });
     });
 
     proxyReq.write(payload);
     proxyReq.end();
   } catch (err) {
-    res.status(400).json({ error: 1, message: "URL inválida: " + err.message });
+    res.status(400).json({ error: 1, message: "Invalid URL: " + err.message });
   }
 });
 
 // Generic forwarder function for reverse proxy
 function forwardProxyRequest(req, res, targetBase) {
   let relativePath = req.url;
-  // Remove query param `target` if present so it's not forwarded to backend
   try {
     const parsedRel = new URL(relativePath, "http://localhost");
     parsedRel.searchParams.delete("target");
     relativePath = parsedRel.pathname + (parsedRel.search ? parsedRel.search : "");
   } catch (e) {}
 
-  // Clean double slashes
   if (relativePath.startsWith("/")) relativePath = relativePath.slice(1);
   const targetFullUrl = new URL(relativePath, targetBase);
   const client = targetFullUrl.protocol === "https:" ? https : http;
@@ -206,23 +246,27 @@ function forwardProxyRequest(req, res, targetBase) {
   const headers = { ...req.headers };
   delete headers.host;
   delete headers.connection;
-  delete headers["content-length"]; // let Node recompute if chunked
+  delete headers["content-length"];
 
   headers["host"] = targetFullUrl.host;
   headers["x-forwarded-for"] = req.ip || req.connection.remoteAddress;
   headers["x-forwarded-proto"] = req.protocol;
+
+  // Inject Cloudflare Access and custom gateway headers
+  const gatewayHeaders = resolveGatewayHeaders(req);
+  for (const [key, val] of Object.entries(gatewayHeaders)) {
+    headers[key.toLowerCase()] = val;
+  }
 
   const proxyReq = client.request(targetFullUrl, {
     method: req.method,
     headers: headers,
     timeout: 30000
   }, (proxyRes) => {
-    // Add CORS headers
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "*");
 
-    // Pass through status and headers
     res.status(proxyRes.statusCode);
     for (const [key, val] of Object.entries(proxyRes.headers)) {
       if (key.toLowerCase() !== "access-control-allow-origin") {
@@ -238,7 +282,7 @@ function forwardProxyRequest(req, res, targetBase) {
     if (!res.headersSent) {
       res.status(502).json({
         error: 502,
-        message: `Error al comunicar con ${targetFullUrl.host}: ${err.message}`
+        message: `Error communicating with ${targetFullUrl.host}: ${err.message}`
       });
     }
   });
@@ -246,11 +290,10 @@ function forwardProxyRequest(req, res, targetBase) {
   proxyReq.on("timeout", () => {
     proxyReq.destroy();
     if (!res.headersSent) {
-      res.status(504).json({ error: 504, message: "Tiempo de espera agotado en el servidor remoto" });
+      res.status(504).json({ error: 504, message: "Gateway timeout from remote server" });
     }
   });
 
-  // Pipe incoming request body to the proxy request
   req.pipe(proxyReq);
 }
 
@@ -288,13 +331,14 @@ app.use((req, res) => {
 // Start HTTP server
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`
-======================================================
+------------------------------------------------------
   Backyard Monsters Refitted - Web Launcher & Proxy
-======================================================
+------------------------------------------------------
   Launcher Web UI:   http://localhost:${PORT}
   Default Server:    ${DEFAULT_SERVER_URL}
   Default CDN:       ${DEFAULT_CDN_URL}
+  CF Access Gateway: ${DEFAULT_CF_CLIENT_ID ? "Configured" : "Disabled (None)"}
   Status:            ONLINE & READY FOR CLOUDFLARE TUNNEL
-======================================================
+------------------------------------------------------
   `);
 });

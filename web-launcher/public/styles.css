@@ -719,6 +719,40 @@ body.is-fullscreen .scale-fill .ruffle-container {
 .log-warn { color: #fde047; }
 .log-error { color: #fca5a5; }
 
+/* Gateway & Cloudflare Access */
+.gateway-box {
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.gateway-header {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.02);
+  user-select: none;
+}
+
+.gateway-header:hover {
+  background-color: var(--surface-hover);
+}
+
+.gateway-toggle-arrow {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.gateway-content {
+  padding: 0.85rem;
+  border-top: 1px solid var(--border-color);
+}
+
 .hidden {
   display: none !important;
 }

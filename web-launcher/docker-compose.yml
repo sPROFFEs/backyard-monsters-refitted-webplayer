@@ -14,6 +14,8 @@ services:
       - PORT=8080
       - DEFAULT_SERVER_URL=${DEFAULT_SERVER_URL:-https://server.bymrefitted.com/}
       - DEFAULT_CDN_URL=${DEFAULT_CDN_URL:-https://cdn.bymrefitted.com/}
+      - CF_ACCESS_CLIENT_ID=${CF_ACCESS_CLIENT_ID:-}
+      - CF_ACCESS_CLIENT_SECRET=${CF_ACCESS_CLIENT_SECRET:-}
     volumes:
       # Optional: Map custom SWF files or asset overrides without rebuilding
       - ./public/swfs:/app/public/swfs:ro
@@ -30,6 +32,5 @@ services:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - web-launcher
-    # Only starts if CLOUDFLARE_TUNNEL_TOKEN is provided in .env
     profiles:
       - tunnel

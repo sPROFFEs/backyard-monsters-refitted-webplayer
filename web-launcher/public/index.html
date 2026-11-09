@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,71 +15,70 @@
     <div class="header-left">
       <div class="game-logo">
         <span class="logo-text">BACKYARD MONSTERS</span>
-        <span class="logo-sub">REFITTED • WEB LAUNCHER</span>
+        <span class="logo-sub">REFITTED / WEB LAUNCHER</span>
       </div>
       <div class="endpoint-badge" id="endpointBadge">
         <span class="status-dot status-offline" id="statusDot"></span>
-        <span class="endpoint-name" id="currentEndpointDisplay">Comprobando servidor...</span>
+        <span class="endpoint-name" id="currentEndpointDisplay">Checking server...</span>
         <span class="ping-tag" id="pingDisplay">-- ms</span>
       </div>
     </div>
 
     <div class="header-right">
-      <button class="btn btn-secondary btn-sm" id="btnOpenSettings" title="Configurar Servidor y Endpoints">
-        <span class="icon">⚙️</span> Servidor / Endpoints
+      <button class="btn btn-secondary btn-sm" id="btnOpenSettings" title="Configure Server and Endpoints">
+        Server / Endpoints
       </button>
 
       <!-- User Profile Pill -->
       <div class="user-pill hidden" id="userPill">
-        <span class="user-icon">👤</span>
-        <span class="user-name" id="userPillName">Jugador</span>
-        <button class="btn-logout" id="btnLogout" title="Cerrar sesión">✕</button>
+        <span class="user-name" id="userPillName">Player</span>
+        <button class="btn-logout" id="btnLogout" title="Log out">&times;</button>
       </div>
 
-      <button class="btn btn-primary btn-sm" id="btnOpenAuth" title="Iniciar sesión">
-        <span class="icon">🔑</span> Conectar Cuenta
+      <button class="btn btn-primary btn-sm" id="btnOpenAuth" title="Log in to account">
+        Connect Account
       </button>
     </div>
   </header>
 
   <!-- Main Content Area -->
   <main class="app-main">
-    <!-- View 1: Game Player View (Default when running) -->
+    <!-- Game Player View -->
     <div class="player-wrapper" id="playerWrapper">
       <!-- In-Game Floating Top Toolbar -->
       <div class="game-toolbar" id="gameToolbar">
         <div class="toolbar-left">
-          <span class="game-title-tag">🎮 Backyard Monsters Refitted (v128.5690)</span>
-          <span class="connection-mode-tag" id="connectionModeTag">Modo: Proxy Docker</span>
+          <span class="game-title-tag">Backyard Monsters Refitted (v128.5690)</span>
+          <span class="connection-mode-tag" id="connectionModeTag">Mode: Docker Proxy</span>
         </div>
         <div class="toolbar-right">
-          <button class="btn-tool" id="btnReloadGame" title="Reiniciar juego">
-            <span>🔄</span> Reiniciar
+          <button class="btn-tool" id="btnReloadGame" title="Restart game instance">
+            Reload
           </button>
           <div class="scale-selector">
-            <label for="scaleSelect">Escala:</label>
+            <label for="scaleSelect">Scale:</label>
             <select id="scaleSelect" class="form-select-sm">
-              <option value="fitted" selected>Ajustar a ventana</option>
+              <option value="fitted" selected>Fit Window</option>
               <option value="original">Original (760x670)</option>
-              <option value="fill">Llenar ventana</option>
+              <option value="fill">Fill Screen</option>
             </select>
           </div>
           <div class="lang-selector">
-            <label for="langSelect">Idioma:</label>
+            <label for="langSelect">Language:</label>
             <select id="langSelect" class="form-select-sm">
-              <option value="spanish" selected>Español</option>
-              <option value="english">English</option>
-              <option value="french">Français</option>
-              <option value="german">Deutsch</option>
-              <option value="portuguese">Português</option>
-              <option value="turkish">Türkçe</option>
+              <option value="english" selected>English</option>
+              <option value="spanish">Spanish</option>
+              <option value="french">French</option>
+              <option value="german">German</option>
+              <option value="portuguese">Portuguese</option>
+              <option value="turkish">Turkish</option>
             </select>
           </div>
-          <button class="btn-tool" id="btnToggleFullscreen" title="Pantalla completa">
-            <span id="fullscreenIcon">⛶</span> Pantalla Completa
+          <button class="btn-tool" id="btnToggleFullscreen" title="Toggle Fullscreen">
+            <span id="fullscreenIcon">[ ]</span> Fullscreen
           </button>
-          <button class="btn-tool" id="btnToggleConsole" title="Consola de depuración">
-            <span>🐞</span>
+          <button class="btn-tool" id="btnToggleConsole" title="Toggle Debug Console">
+            Console
           </button>
         </div>
       </div>
@@ -89,8 +88,8 @@
         <div id="ruffleContainer" class="ruffle-container">
           <div class="loading-splash" id="loadingSplash">
             <div class="spinner"></div>
-            <h3>Iniciando Backyard Monsters...</h3>
-            <p id="splashStatusText">Cargando motor WebAssembly de Flash...</p>
+            <h3>Loading Backyard Monsters...</h3>
+            <p id="splashStatusText">Initializing Flash WebAssembly runtime...</p>
           </div>
         </div>
       </div>
@@ -99,14 +98,14 @@
     <!-- Debug Console Drawer -->
     <div class="debug-console hidden" id="debugConsole">
       <div class="console-header">
-        <h4>Consola de Depuración & Red</h4>
+        <h4>Debug & Network Console</h4>
         <div>
-          <button class="btn-console-clear" id="btnClearLogs">Limpiar</button>
-          <button class="btn-console-close" id="btnCloseConsole">✕</button>
+          <button class="btn-console-clear" id="btnClearLogs">Clear</button>
+          <button class="btn-console-close" id="btnCloseConsole">&times;</button>
         </div>
       </div>
       <div class="console-body" id="consoleLogs">
-        <div class="log-entry log-info">[Launcher] Inicializando Backyard Monsters Web Launcher...</div>
+        <div class="log-entry log-info">[Launcher] Initializing Backyard Monsters Web Launcher...</div>
       </div>
     </div>
   </main>
@@ -115,57 +114,82 @@
   <div class="modal-backdrop hidden" id="settingsModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Modificador de Endpoint & Servidor</h3>
-        <button class="modal-close" id="btnCloseSettings">✕</button>
+        <h3>Server & Endpoint Modifier</h3>
+        <button class="modal-close" id="btnCloseSettings">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">
-          Aquí puedes elegir o modificar el servidor contra el que deseas autenticarte y jugar. Si el servidor oficial cierra o se cae, puedes apuntar a tu propio servidor privado sin reinstalar nada.
+          Select or customize the backend server you want to connect to. By default, it connects to the official Refitted servers. If their servers are ever taken offline, you can switch to your own private server without reinstalling.
         </p>
 
         <!-- Presets -->
         <div class="form-group">
-          <label>Servidor Preconfigurado:</label>
+          <label>Server Preset:</label>
           <div class="preset-grid">
             <button type="button" class="preset-card active" data-preset="official">
-              <div class="preset-title">🌐 Servidor Oficial (Por Defecto)</div>
+              <div class="preset-title">Official Server (Default)</div>
               <div class="preset-sub">https://server.bymrefitted.com/</div>
             </button>
             <button type="button" class="preset-card" data-preset="local">
-              <div class="preset-title">🏠 Servidor Local (Docker)</div>
+              <div class="preset-title">Local Server (Docker)</div>
               <div class="preset-sub">http://localhost:3001/</div>
             </button>
             <button type="button" class="preset-card" data-preset="custom">
-              <div class="preset-title">⚙️ Servidor Propio / Personalizado</div>
-              <div class="preset-sub">Configura tu IP o dominio privado</div>
+              <div class="preset-title">Custom Server</div>
+              <div class="preset-sub">Configure custom IP or domain</div>
             </button>
           </div>
         </div>
 
         <!-- Custom Inputs -->
         <div class="form-group">
-          <label for="inputServerUrl">URL del Servidor API:</label>
+          <label for="inputServerUrl">API Server URL:</label>
           <input type="url" id="inputServerUrl" class="form-input" placeholder="https://server.bymrefitted.com/" />
-          <span class="field-hint">Endpoint base de la API del juego donde se guardan aldeas y perfiles.</span>
+          <span class="field-hint">Base endpoint for the game API where bases, resources, and profiles are saved.</span>
         </div>
 
         <div class="form-group">
-          <label for="inputCdnUrl">URL del CDN de Assets:</label>
+          <label for="inputCdnUrl">Asset CDN URL:</label>
           <input type="url" id="inputCdnUrl" class="form-input" placeholder="https://cdn.bymrefitted.com/" />
-          <span class="field-hint">Servidor de imágenes, sonidos y mapas. Si usas servidor propio suele ser la misma URL.</span>
+          <span class="field-hint">Storage server for game sprites, images, and sounds.</span>
+        </div>
+
+        <!-- Cloudflare Access & Gateway Support -->
+        <div class="gateway-box">
+          <div class="gateway-header" id="gatewayToggle">
+            <strong>Access Gateway / Cloudflare Access (Optional)</strong>
+            <span class="gateway-toggle-arrow" id="gatewayToggleArrow">+</span>
+          </div>
+          <div class="gateway-content hidden" id="gatewayContent">
+            <p class="field-hint" style="margin-bottom: 0.6rem;">
+              If your backend is protected behind Cloudflare Access (Cloudflare Zero Trust) or an authentication gateway, provide the Service Token credentials here.
+            </p>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label for="inputCfClientId">CF-Access-Client-Id:</label>
+              <input type="text" id="inputCfClientId" class="form-input" placeholder="e.g. 1234567890abcdef.access" autocomplete="off" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label for="inputCfClientSecret">CF-Access-Client-Secret:</label>
+              <input type="password" id="inputCfClientSecret" class="form-input" placeholder="e.g. 9876543210fedcba..." autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="inputCustomAuthHeader">Custom Auth Header (Optional):</label>
+              <input type="text" id="inputCustomAuthHeader" class="form-input" placeholder="Header-Name: Value (e.g. Authorization: Bearer token)" />
+            </div>
+          </div>
         </div>
 
         <!-- Connection Mode -->
         <div class="form-group">
-          <label>Modo de Conexión:</label>
+          <label>Connection Mode:</label>
           <div class="radio-options">
             <label class="radio-label">
               <input type="radio" name="proxyMode" value="proxy" checked />
-              <span><strong>Proxy Docker (Recomendado para Cloudflare Tunnel)</strong> — Evita errores de CORS y Mixed Content (HTTPS a HTTP).</span>
+              <span><strong>Docker Proxy (Recommended for Cloudflare Tunnel)</strong> &mdash; Prevents browser CORS and Mixed Content (HTTPS to HTTP) blocks.</span>
             </label>
             <label class="radio-label">
               <input type="radio" name="proxyMode" value="direct" />
-              <span><strong>Conexión Directa</strong> — El navegador hace peticiones directamente al servidor de destino.</span>
+              <span><strong>Direct Connection</strong> &mdash; Browser makes network requests directly to the target server.</span>
             </label>
           </div>
         </div>
@@ -173,15 +197,15 @@
         <!-- Ping Tester -->
         <div class="ping-section">
           <button type="button" class="btn btn-secondary" id="btnTestConnection">
-            <span>⚡</span> Probar Conexión al Servidor
+            Test Connection
           </button>
           <span class="test-result" id="testResultText"></span>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="btnResetOfficial" title="Restaurar a los servidores oficiales por defecto">↺ Restaurar Oficial</button>
-        <button type="button" class="btn btn-secondary" id="btnCancelSettings">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="btnSaveSettings">Guardar y Conectar</button>
+        <button type="button" class="btn btn-secondary" id="btnResetOfficial" title="Reset to official default server">Reset to Official</button>
+        <button type="button" class="btn btn-secondary" id="btnCancelSettings">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnSaveSettings">Save & Connect</button>
       </div>
     </div>
   </div>
@@ -190,52 +214,52 @@
   <div class="modal-backdrop hidden" id="authModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Iniciar Sesión en el Servidor</h3>
-        <button class="modal-close" id="btnCloseAuth">✕</button>
+        <h3>Sign In to Game Server</h3>
+        <button class="modal-close" id="btnCloseAuth">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">
-          Conéctate con tu cuenta para que el juego cargue directamente tu aldea sin pedir credenciales en cada recarga.
+          Sign in with your game account to load your village directly without entering credentials on every reload.
         </p>
 
         <div class="tabs">
-          <button class="tab-btn active" data-tab="credentials">Email & Contraseña</button>
-          <button class="tab-btn" data-tab="token">Token JWT Directo</button>
+          <button class="tab-btn active" data-tab="credentials">Email & Password</button>
+          <button class="tab-btn" data-tab="token">Direct JWT Token</button>
         </div>
 
         <!-- Form 1: Email & Password -->
         <form id="formCredentials" class="tab-content active">
           <div class="form-group">
-            <label for="authEmail">Correo Electrónico:</label>
-            <input type="email" id="authEmail" class="form-input" placeholder="tu@email.com" required />
+            <label for="authEmail">Email Address:</label>
+            <input type="email" id="authEmail" class="form-input" placeholder="user@example.com" required />
           </div>
           <div class="form-group">
-            <label for="authPassword">Contraseña:</label>
-            <input type="password" id="authPassword" class="form-input" placeholder="••••••••" required />
+            <label for="authPassword">Password:</label>
+            <input type="password" id="authPassword" class="form-input" placeholder="Password" required />
           </div>
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" id="authRemember" checked />
-              <span>Guardar sesión en este navegador</span>
+              <span>Remember login on this browser</span>
             </label>
           </div>
           <div class="auth-error-msg hidden" id="authErrorMsg"></div>
           <div class="modal-footer no-padding">
-            <button type="button" class="btn btn-secondary" id="btnPlayAsGuest">Jugar con Login In-Game</button>
-            <button type="submit" class="btn btn-primary" id="btnSubmitLogin">Iniciar Sesión y Jugar</button>
+            <button type="button" class="btn btn-secondary" id="btnPlayAsGuest">Play with In-Game Login</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitLogin">Sign In & Play</button>
           </div>
         </form>
 
         <!-- Form 2: Direct Token -->
         <form id="formToken" class="tab-content">
           <div class="form-group">
-            <label for="authTokenInput">Token JWT de Sesión:</label>
+            <label for="authTokenInput">Session JWT Token:</label>
             <textarea id="authTokenInput" class="form-input token-area" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
-            <span class="field-hint">Pega un token generado por el launcher oficial de escritorio o la API.</span>
+            <span class="field-hint">Paste a token generated by the desktop launcher or API.</span>
           </div>
           <div class="modal-footer no-padding">
-            <button type="button" class="btn btn-secondary" id="btnCancelToken">Cancelar</button>
-            <button type="submit" class="btn btn-primary" id="btnSubmitToken">Usar Token</button>
+            <button type="button" class="btn btn-secondary" id="btnCancelToken">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitToken">Use Token</button>
           </div>
         </form>
       </div>
