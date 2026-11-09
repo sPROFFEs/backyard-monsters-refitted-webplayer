@@ -1,0 +1,141 @@
+# Full Stack: Backyard Monsters Self-Hosted Server + Web Launcher + Database + Redis
+version: "3.8"
+
+volumes:
+  db-data:
+
+networks:
+  bymr-net:
+    driver: bridge
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # 🎮 Web Launcher & In-Browser Player
+  # ─────────────────────────────────────────────────────────────
+  web-launcher:
+    build:
+      context: ./web-launcher
+      dockerfile: Dockerfile
+    container_name: bymr-web-launcher
+    restart: unless-stopped
+    ports:
+      - "${LAUNCHER_PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - DEFAULT_SERVER_URL=${DEFAULT_SERVER_URL:-http://web:3001/}
+      - DEFAULT_CDN_URL=${DEFAULT_CDN_URL:-http://web:3001/}
+    networks:
+      - bymr-net
+    depends_on:
+      - web
+
+  # ─────────────────────────────────────────────────────────────
+  # 🖥️ Backyard Monsters API Server (Bun + Koa)
+  # ─────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: bymr-api-server
+    restart: unless-stopped
+    environment:
+      - ENV=${ENV:-local}
+      - BASE_URL=${BASE_URL:-http://localhost}
+      - PORT=3001
+      - DB_NAME=${DB_NAME:-bym}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-dev12345}
+      - SECRET_KEY=${SECRET_KEY:-supersecretkey1234567890123456}
+      - REDIS_URL=redis://redis:6379
+      - CDN_URL=${CDN_URL:-}
+      - USE_VERSION_MANAGEMENT=disabled
+      - CHAT_WS_PORT=3010
+      - CHAT_WS_HOST=${CHAT_WS_HOST:-localhost:3010}
+    ports:
+      - "${API_PORT:-3001}:3001"
+      - "${CHAT_PORT:-3010}:3010"
+    networks:
+      - bymr-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+  # ─────────────────────────────────────────────────────────────
+  # 🗄️ Database Initialization (Runs once to seed/migrate)
+  # ─────────────────────────────────────────────────────────────
+  db-init:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      - DB_NAME=${DB_NAME:-bym}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-dev12345}
+    networks:
+      - bymr-net
+    depends_on:
+      db:
+        condition: service_healthy
+    command: bun run db:init
+    restart: "no"
+
+  # ─────────────────────────────────────────────────────────────
+  # 🐘 PostgreSQL Database
+  # ─────────────────────────────────────────────────────────────
+  db:
+    image: postgres:18.1-alpine
+    container_name: bymr-database
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-bym}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-dev12345}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - bymr-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # ⚡ Redis Cache & Session Store
+  # ─────────────────────────────────────────────────────────────
+  redis:
+    image: redis:alpine
+    container_name: bymr-redis
+    restart: unless-stopped
+    networks:
+      - bymr-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # ☁️ Cloudflare Tunnel (Optional, activated with --profile tunnel)
+  # ─────────────────────────────────────────────────────────────
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: bymr-cloudflare-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks:
+      - bymr-net
+    depends_on:
+      - web-launcher
+    profiles:
+      - tunnel

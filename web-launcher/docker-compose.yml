@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  # Backyard Monsters Refitted Web Launcher & CORS/Proxy Service
+  web-launcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bymr-web-launcher
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - DEFAULT_SERVER_URL=${DEFAULT_SERVER_URL:-https://server.bymrefitted.com/}
+      - DEFAULT_CDN_URL=${DEFAULT_CDN_URL:-https://cdn.bymrefitted.com/}
+    volumes:
+      # Optional: Map custom SWF files or asset overrides without rebuilding
+      - ./public/swfs:/app/public/swfs:ro
+
+  # Optional Cloudflare Tunnel Service
+  # To use: create a tunnel in Cloudflare Zero Trust (https://one.dash.cloudflare.com)
+  # and set your token in a .env file: CLOUDFLARE_TUNNEL_TOKEN=ey...
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: bymr-cloudflare-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web-launcher
+    # Only starts if CLOUDFLARE_TUNNEL_TOKEN is provided in .env
+    profiles:
+      - tunnel

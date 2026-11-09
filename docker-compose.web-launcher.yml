@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  web-launcher:
+    build:
+      context: ./web-launcher
+      dockerfile: Dockerfile
+    container_name: bymr-web-launcher
+    restart: unless-stopped
+    ports:
+      - "${LAUNCHER_PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - DEFAULT_SERVER_URL=${DEFAULT_SERVER_URL:-https://server.bymrefitted.com/}
+      - DEFAULT_CDN_URL=${DEFAULT_CDN_URL:-https://cdn.bymrefitted.com/}
+    volumes:
+      - ./web-launcher/public/swfs:/app/public/swfs:ro
+
+  # Optional Cloudflare Tunnel service
+  # Run with: docker compose -f docker-compose.web-launcher.yml --profile tunnel up -d
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: bymr-cloudflare-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web-launcher
+    profiles:
+      - tunnel

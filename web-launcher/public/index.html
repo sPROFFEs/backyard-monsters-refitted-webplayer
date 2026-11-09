@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backyard Monsters: Refitted - Web Launcher</title>
+  <link rel="icon" type="image/png" href="https://server.bymrefitted.com/assets/monsters/monster1.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Ruffle Flash Emulator (Local bundle with fallback) -->
+  <script src="vendor/ruffle/ruffle.js"></script>
+</head>
+<body class="bg-dark">
+  <!-- Top Navigation / Status Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="game-logo">
+        <span class="logo-text">BACKYARD MONSTERS</span>
+        <span class="logo-sub">REFITTED • WEB LAUNCHER</span>
+      </div>
+      <div class="endpoint-badge" id="endpointBadge">
+        <span class="status-dot status-offline" id="statusDot"></span>
+        <span class="endpoint-name" id="currentEndpointDisplay">Comprobando servidor...</span>
+        <span class="ping-tag" id="pingDisplay">-- ms</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn btn-secondary btn-sm" id="btnOpenSettings" title="Configurar Servidor y Endpoints">
+        <span class="icon">⚙️</span> Servidor / Endpoints
+      </button>
+
+      <!-- User Profile Pill -->
+      <div class="user-pill hidden" id="userPill">
+        <span class="user-icon">👤</span>
+        <span class="user-name" id="userPillName">Jugador</span>
+        <button class="btn-logout" id="btnLogout" title="Cerrar sesión">✕</button>
+      </div>
+
+      <button class="btn btn-primary btn-sm" id="btnOpenAuth" title="Iniciar sesión">
+        <span class="icon">🔑</span> Conectar Cuenta
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="app-main">
+    <!-- View 1: Game Player View (Default when running) -->
+    <div class="player-wrapper" id="playerWrapper">
+      <!-- In-Game Floating Top Toolbar -->
+      <div class="game-toolbar" id="gameToolbar">
+        <div class="toolbar-left">
+          <span class="game-title-tag">🎮 Backyard Monsters Refitted (v128.5690)</span>
+          <span class="connection-mode-tag" id="connectionModeTag">Modo: Proxy Docker</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn-tool" id="btnReloadGame" title="Reiniciar juego">
+            <span>🔄</span> Reiniciar
+          </button>
+          <div class="scale-selector">
+            <label for="scaleSelect">Escala:</label>
+            <select id="scaleSelect" class="form-select-sm">
+              <option value="fitted" selected>Ajustar a ventana</option>
+              <option value="original">Original (760x670)</option>
+              <option value="fill">Llenar ventana</option>
+            </select>
+          </div>
+          <div class="lang-selector">
+            <label for="langSelect">Idioma:</label>
+            <select id="langSelect" class="form-select-sm">
+              <option value="spanish" selected>Español</option>
+              <option value="english">English</option>
+              <option value="french">Français</option>
+              <option value="german">Deutsch</option>
+              <option value="portuguese">Português</option>
+              <option value="turkish">Türkçe</option>
+            </select>
+          </div>
+          <button class="btn-tool" id="btnToggleFullscreen" title="Pantalla completa">
+            <span id="fullscreenIcon">⛶</span> Pantalla Completa
+          </button>
+          <button class="btn-tool" id="btnToggleConsole" title="Consola de depuración">
+            <span>🐞</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Flash Container -->
+      <div class="game-viewport" id="gameViewport">
+        <div id="ruffleContainer" class="ruffle-container">
+          <div class="loading-splash" id="loadingSplash">
+            <div class="spinner"></div>
+            <h3>Iniciando Backyard Monsters...</h3>
+            <p id="splashStatusText">Cargando motor WebAssembly de Flash...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Console Drawer -->
+    <div class="debug-console hidden" id="debugConsole">
+      <div class="console-header">
+        <h4>Consola de Depuración & Red</h4>
+        <div>
+          <button class="btn-console-clear" id="btnClearLogs">Limpiar</button>
+          <button class="btn-console-close" id="btnCloseConsole">✕</button>
+        </div>
+      </div>
+      <div class="console-body" id="consoleLogs">
+        <div class="log-entry log-info">[Launcher] Inicializando Backyard Monsters Web Launcher...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal 1: Server & Endpoint Configuration -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Modificador de Endpoint & Servidor</h3>
+        <button class="modal-close" id="btnCloseSettings">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Aquí puedes elegir o modificar el servidor contra el que deseas autenticarte y jugar. Si el servidor oficial cierra o se cae, puedes apuntar a tu propio servidor privado sin reinstalar nada.
+        </p>
+
+        <!-- Presets -->
+        <div class="form-group">
+          <label>Servidor Preconfigurado:</label>
+          <div class="preset-grid">
+            <button type="button" class="preset-card active" data-preset="official">
+              <div class="preset-title">🌐 Servidor Oficial (Por Defecto)</div>
+              <div class="preset-sub">https://server.bymrefitted.com/</div>
+            </button>
+            <button type="button" class="preset-card" data-preset="local">
+              <div class="preset-title">🏠 Servidor Local (Docker)</div>
+              <div class="preset-sub">http://localhost:3001/</div>
+            </button>
+            <button type="button" class="preset-card" data-preset="custom">
+              <div class="preset-title">⚙️ Servidor Propio / Personalizado</div>
+              <div class="preset-sub">Configura tu IP o dominio privado</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Inputs -->
+        <div class="form-group">
+          <label for="inputServerUrl">URL del Servidor API:</label>
+          <input type="url" id="inputServerUrl" class="form-input" placeholder="https://server.bymrefitted.com/" />
+          <span class="field-hint">Endpoint base de la API del juego donde se guardan aldeas y perfiles.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="inputCdnUrl">URL del CDN de Assets:</label>
+          <input type="url" id="inputCdnUrl" class="form-input" placeholder="https://cdn.bymrefitted.com/" />
+          <span class="field-hint">Servidor de imágenes, sonidos y mapas. Si usas servidor propio suele ser la misma URL.</span>
+        </div>
+
+        <!-- Connection Mode -->
+        <div class="form-group">
+          <label>Modo de Conexión:</label>
+          <div class="radio-options">
+            <label class="radio-label">
+              <input type="radio" name="proxyMode" value="proxy" checked />
+              <span><strong>Proxy Docker (Recomendado para Cloudflare Tunnel)</strong> — Evita errores de CORS y Mixed Content (HTTPS a HTTP).</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="proxyMode" value="direct" />
+              <span><strong>Conexión Directa</strong> — El navegador hace peticiones directamente al servidor de destino.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Ping Tester -->
+        <div class="ping-section">
+          <button type="button" class="btn btn-secondary" id="btnTestConnection">
+            <span>⚡</span> Probar Conexión al Servidor
+          </button>
+          <span class="test-result" id="testResultText"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnResetOfficial" title="Restaurar a los servidores oficiales por defecto">↺ Restaurar Oficial</button>
+        <button type="button" class="btn btn-secondary" id="btnCancelSettings">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSaveSettings">Guardar y Conectar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Authentication / Account Login -->
+  <div class="modal-backdrop hidden" id="authModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Iniciar Sesión en el Servidor</h3>
+        <button class="modal-close" id="btnCloseAuth">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Conéctate con tu cuenta para que el juego cargue directamente tu aldea sin pedir credenciales en cada recarga.
+        </p>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="credentials">Email & Contraseña</button>
+          <button class="tab-btn" data-tab="token">Token JWT Directo</button>
+        </div>
+
+        <!-- Form 1: Email & Password -->
+        <form id="formCredentials" class="tab-content active">
+          <div class="form-group">
+            <label for="authEmail">Correo Electrónico:</label>
+            <input type="email" id="authEmail" class="form-input" placeholder="tu@email.com" required />
+          </div>
+          <div class="form-group">
+            <label for="authPassword">Contraseña:</label>
+            <input type="password" id="authPassword" class="form-input" placeholder="••••••••" required />
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="authRemember" checked />
+              <span>Guardar sesión en este navegador</span>
+            </label>
+          </div>
+          <div class="auth-error-msg hidden" id="authErrorMsg"></div>
+          <div class="modal-footer no-padding">
+            <button type="button" class="btn btn-secondary" id="btnPlayAsGuest">Jugar con Login In-Game</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitLogin">Iniciar Sesión y Jugar</button>
+          </div>
+        </form>
+
+        <!-- Form 2: Direct Token -->
+        <form id="formToken" class="tab-content">
+          <div class="form-group">
+            <label for="authTokenInput">Token JWT de Sesión:</label>
+            <textarea id="authTokenInput" class="form-input token-area" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+            <span class="field-hint">Pega un token generado por el launcher oficial de escritorio o la API.</span>
+          </div>
+          <div class="modal-footer no-padding">
+            <button type="button" class="btn btn-secondary" id="btnCancelToken">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitToken">Usar Token</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
