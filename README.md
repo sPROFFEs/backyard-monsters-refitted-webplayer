@@ -99,6 +99,22 @@ For complete details, see the [Web Launcher Guide](./web-launcher/README.md).
 
 ---
 
+## Minimum Hardware Requirements (VM / LXC)
+
+Because **Ruffle (the Flash WebAssembly engine) and the game run client-side in the player's web browser**, the server does not perform GPU emulation or heavy rendering.
+
+| Deployment Type | Minimum RAM | Recommended RAM | CPU | Disk | Real Process Usage |
+|---|---|---|---|---|---|
+| **Web Launcher Only** *(Recommended)* | 256 MB | 512 MB | 1 vCPU | 2 - 4 GB | ~70 MB RAM (~40 MB Node.js + ~30 MB cloudflared) |
+| **Full-Stack Self-Hosted** *(Backend + DB + Redis + Launcher)* | 1 GB | 2 GB | 1 - 2 vCPU | 10 - 20 GB | ~550 MB - 1 GB RAM |
+
+### Proxmox LXC Best Practices
+- **LXC is strongly recommended** over full VMs due to minimal memory overhead (~30-40 MB base).
+- If running Docker inside a Proxmox LXC container, ensure `nesting=1` and `keyctl=1` are enabled in container features.
+- You can also run the launcher directly with Node.js on bare-metal LXC without Docker to consume only ~35 MB RAM. See the [Hardware Guide](./web-launcher/README.md#minimum-hardware-requirements-vm--lxc) for systemd service configuration.
+
+---
+
 ## About the Upstream Project (Backyard Monsters Refitted)
 
 This repository is a digital preservation and restoration of Backyard Monsters, Kixeye's 2010 Flash-based strategy game. It features a reconstructed client, decompiled from original game files, alongside a custom-built server component implemented through reverse engineering efforts.

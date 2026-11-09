@@ -70,6 +70,83 @@ This starts:
 
 ---
 
+## Minimum Hardware Requirements (VM / LXC)
+
+The hardware requirements differ significantly depending on whether you run **only the Web Launcher** (connecting to the official server) or the **Full-Stack self-hosted environment** (database, redis, and game API).
+
+Because **Ruffle (the Flash WebAssembly engine) and the game execute client-side in the player's web browser**, the server does not perform Flash rendering or GPU emulation. The server only delivers static assets and handles lightweight HTTP/JSON proxying.
+
+### Scenario 1: Web Launcher Only (Recommended)
+*(Web Launcher + Anti-CORS Reverse Proxy + Cloudflare Tunnel)*
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| **RAM** | 256 MB | 512 MB |
+| **CPU** | 1 vCPU (< 1-2% active utilization) | 1 vCPU |
+| **Storage** | 2 GB | 4 GB |
+| **Actual Process Memory** | ~40 MB (Node.js) + ~30 MB (cloudflared) = **~70 MB RAM total** |
+
+### Scenario 2: Full-Stack Self-Hosting
+*(Web Launcher + Backyard Monsters Koa/Bun API + PostgreSQL 18 + Redis 8)*
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| **RAM** | 1 GB | 2 GB |
+| **CPU** | 1 vCPU | 2 vCPU |
+| **Storage** | 10 GB | 15 - 20 GB (for database storage, layers, and logs) |
+
+---
+
+## Proxmox LXC vs KVM VM Optimization
+
+### Running in Proxmox LXC (Recommended)
+An LXC container is the ideal deployment choice due to near-zero OS virtualization overhead:
+- A base Debian or Alpine LXC container typically idles at under 40 MB RAM.
+- **Docker inside LXC**: If you run Docker Compose inside a Proxmox LXC container, ensure the following features are enabled in the container configuration (`/etc/pve/lxc/<id>.conf` or under **Options > Features** in the Proxmox GUI):
+  - `keyctl: 1`
+  - `nesting: 1`
+
+### Bare-Metal LXC without Docker (Ultra-Lightweight)
+If you want the lowest possible memory footprint without Docker overhead, you can run the launcher directly with Node.js inside the LXC container:
+
+1. Install Node.js:
+   ```bash
+   apt update && apt install -y nodejs npm
+   ```
+2. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/sPROFFEs/backyard-monsters-refitted-webplayer.git /opt/bymr-webplayer
+   cd /opt/bymr-webplayer/web-launcher
+   npm install --omit=dev
+   ```
+3. Create a systemd service (`/etc/systemd/system/bymr-launcher.service`):
+   ```ini
+   [Unit]
+   Description=Backyard Monsters Web Launcher
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=root
+   WorkingDirectory=/opt/bymr-webplayer/web-launcher
+   ExecStart=/usr/bin/node server.js
+   Restart=always
+   Environment=PORT=8080
+   Environment=DEFAULT_SERVER_URL=https://server.bymrefitted.com/
+   Environment=DEFAULT_CDN_URL=https://cdn.bymrefitted.com/
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+4. Enable and start:
+   ```bash
+   systemctl daemon-reload
+   systemctl enable --now bymr-launcher
+   ```
+   *Memory footprint in this mode is only ~35 MB RAM.*
+
+---
+
 ## Cloudflare Tunnel Setup
 
 To expose the launcher to the internet under your custom domain (e.g., `https://bym.yourdomain.com`):
