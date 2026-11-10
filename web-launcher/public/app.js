@@ -208,9 +208,69 @@
       elements.btnOpenAuth.classList.add("hidden");
       elements.userPillName.textContent = "Token Active";
       elements.userPill.title = "Logged in using direct session token";
-    } else {
-      elements.userPill.classList.add("hidden");
-      elements.btnOpenAuth.classList.remove("hidden");
+    } else {
+      elements.userPill.classList.add("hidden");
+      elements.btnOpenAuth.classList.remove("hidden");
+    }
+  }
+
+  function clearStoredSession() {
+    state.token = "";
+    state.userProfile = null;
+    localStorage.removeItem("bymr_auth_token");
+    localStorage.removeItem("bymr_user_profile");
+    updateAuthUI();
+  }
+
+  async function callAuthEndpoint(authPayload) {
+    const endpoint =
+      state.proxyMode === "direct"
+        ? ensureTrailingSlash(state.serverUrl) + "api/v1.9.2-beta/player/getinfo"
+        : "/api/launcher/login";
+
+    const body =
+      state.proxyMode === "direct"
+        ? authPayload
+        : {
+            serverUrl: state.serverUrl,
+            cfClientId: state.cfClientId,
+            cfClientSecret: state.cfClientSecret,
+            customAuthHeader: state.customAuthHeader,
+            ...authPayload
+          };
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  async function validateStoredToken() {
+    if (!state.token) return;
+
+    try {
+      const { res, data } = await callAuthEndpoint({
+        token: state.token,
+        sessionType: "launcher"
+      });
+
+      if (res.ok && data.token) {
+        state.token = data.token;
+        state.userProfile = data;
+        localStorage.setItem("bymr_auth_token", data.token);
+        localStorage.setItem("bymr_user_profile", JSON.stringify(data));
+        updateAuthUI();
+        log(`Session verified for ${data.username || "player"}`, "success");
+      } else if (res.status === 401 || res.status === 403 || data.error) {
+        clearStoredSession();
+        log("Saved session expired or was invalidated; cleared stored token.", "warn");
+      }
+    } catch (err) {
+      log(`Could not verify saved session: ${err.message}`, "warn");
     }
   }
 
@@ -442,9 +502,10 @@
   elements.scaleSelect.addEventListener("change", (e) => applyScale(e.target.value));
 
   // Reload button inside Settings
-  elements.btnReloadGame.addEventListener("click", () => {
+  elements.btnReloadGame.addEventListener("click", async () => {
     elements.settingsModal.classList.add("hidden");
     log("Reloading game instance...", "info");
+    await validateStoredToken();
     launchGame();
   });
 
@@ -465,6 +526,7 @@
       return;
     }
 
+    const prevServerUrl = state.serverUrl;
     const needsRestart =
       newServer !== state.serverUrl ||
       newCdn !== state.cdnUrl ||
@@ -495,6 +557,9 @@
     log(`Settings saved. Server: ${newServer} [${selectedMode}]`, "success");
 
     if (needsRestart) {
+      if (newServer !== prevServerUrl) {
+        clearStoredSession();
+      }
       pingServer();
       launchGame();
     }
@@ -529,21 +594,11 @@
     submitBtn.textContent = "Verifying...";
 
     try {
-      const res = await fetch("/api/launcher/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          serverUrl: state.serverUrl,
-          email,
-          password,
-          sessionType: "launcher",
-          cfClientId: state.cfClientId,
-          cfClientSecret: state.cfClientSecret,
-          customAuthHeader: state.customAuthHeader
-        })
+      const { data } = await callAuthEndpoint({
+        email,
+        password,
+        sessionType: "launcher"
       });
-
-      const data = await res.json();
       submitBtn.disabled = false;
       submitBtn.textContent = "Sign In & Play";
 
@@ -594,11 +649,7 @@
   elements.btnCancelToken.addEventListener("click", () => elements.authModal.classList.add("hidden"));
 
   elements.btnPlayAsGuest.addEventListener("click", () => {
-    state.token = "";
-    state.userProfile = null;
-    localStorage.removeItem("bymr_auth_token");
-    localStorage.removeItem("bymr_user_profile");
-    updateAuthUI();
+    clearStoredSession();
     elements.authModal.classList.add("hidden");
     log("Starting guest / in-game authentication mode", "info");
     launchGame();
@@ -606,11 +657,7 @@
 
   elements.btnLogout.addEventListener("click", () => {
     if (confirm("Do you want to sign out from this web launcher?")) {
-      state.token = "";
-      state.userProfile = null;
-      localStorage.removeItem("bymr_auth_token");
-      localStorage.removeItem("bymr_user_profile");
-      updateAuthUI();
+      clearStoredSession();
       log("Signed out", "info");
       launchGame();
     }
@@ -643,6 +690,7 @@
     }
 
     pingServer();
+    await validateStoredToken();
     launchGame();
   }
 
