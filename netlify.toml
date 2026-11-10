@@ -13,7 +13,7 @@
   for = "/swfs/*.swf"
   [headers.values]
     Content-Type = "application/x-shockwave-flash"
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[edge_functions]]
   path = "/api/launcher/*"
