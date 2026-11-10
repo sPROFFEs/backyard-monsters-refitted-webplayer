@@ -306,7 +306,7 @@
       // Load SWF
       elements.splashStatusText.textContent = "Loading BYMR client SWF (v1.9.2-beta)...";
       await player.load({
-        url: "/swfs/bymr-client.swf",
+        url: "/swfs/bymr-client.swf?v=1.9.2-beta",
         allowScriptAccess: false,
         parameters: player.config.parameters
       });
