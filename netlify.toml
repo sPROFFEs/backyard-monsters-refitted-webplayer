@@ -1,0 +1,41 @@
+[build]
+  base = "."
+  publish = "web-launcher/public"
+  edge_functions = "web-launcher/netlify/edge-functions"
+
+[[headers]]
+  for = "/vendor/ruffle/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/swfs/*.swf"
+  [headers.values]
+    Content-Type = "application/x-shockwave-flash"
+    Cache-Control = "public, max-age=86400"
+
+[[edge_functions]]
+  path = "/api/launcher/*"
+  function = "launcher-api"
+
+[[edge_functions]]
+  path = "/proxy/server/*"
+  function = "proxy"
+
+[[edge_functions]]
+  path = "/proxy/server"
+  function = "proxy"
+
+[[edge_functions]]
+  path = "/proxy/cdn/*"
+  function = "proxy"
+
+[[edge_functions]]
+  path = "/proxy/cdn"
+  function = "proxy"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

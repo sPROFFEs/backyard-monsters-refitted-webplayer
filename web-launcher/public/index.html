@@ -49,7 +49,7 @@
       <div class="game-toolbar" id="gameToolbar">
         <div class="toolbar-left">
           <span class="game-title-tag">Backyard Monsters Refitted (v128.5690)</span>
-          <span class="connection-mode-tag" id="connectionModeTag">Mode: Docker Proxy</span>
+          <span class="connection-mode-tag" id="connectionModeTag">Mode: Edge Proxy</span>
         </div>
         <div class="toolbar-right">
           <button class="btn-tool" id="btnReloadGame" title="Restart game instance">
@@ -131,12 +131,12 @@
               <div class="preset-sub">https://server.bymrefitted.com/</div>
             </button>
             <button type="button" class="preset-card" data-preset="local">
-              <div class="preset-title">Local Server (Docker)</div>
+              <div class="preset-title">Local Server (Direct Only)</div>
               <div class="preset-sub">http://localhost:3001/</div>
             </button>
             <button type="button" class="preset-card" data-preset="custom">
-              <div class="preset-title">Custom Server</div>
-              <div class="preset-sub">Configure custom IP or domain</div>
+              <div class="preset-title">Custom Public Server</div>
+              <div class="preset-sub">Domain or Cloudflare Tunnel URL</div>
             </button>
           </div>
         </div>
@@ -185,11 +185,11 @@
           <div class="radio-options">
             <label class="radio-label">
               <input type="radio" name="proxyMode" value="proxy" checked />
-              <span><strong>Docker Proxy (Recommended for Cloudflare Tunnel)</strong> &mdash; Prevents browser CORS and Mixed Content (HTTPS to HTTP) blocks.</span>
+              <span><strong>Server / Edge Proxy (Recommended)</strong> &mdash; Prevents CORS and Mixed Content blocks and forwards Cloudflare Access headers. Requires a publicly reachable endpoint.</span>
             </label>
             <label class="radio-label">
               <input type="radio" name="proxyMode" value="direct" />
-              <span><strong>Direct Connection</strong> &mdash; Browser makes network requests directly to the target server.</span>
+              <span><strong>Direct Connection</strong> &mdash; Browser sends requests directly to the target server (required for localhost backends).</span>
             </label>
           </div>
         </div>

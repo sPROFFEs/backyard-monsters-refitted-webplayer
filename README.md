@@ -8,6 +8,7 @@
   <a href="https://github.com/sPROFFEs/backyard-monsters-refitted-webplayer">
     <img src="https://img.shields.io/badge/Fork-Web%20Player%20%26%20Launcher-f59e0b?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Web Player Fork">
   </a>
+  <img src="https://img.shields.io/badge/Netlify-Edge%20Ready-00C7B7.svg?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify">
   <img src="https://img.shields.io/badge/Docker-Supported-0db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/Cloudflare%20Tunnel-Ready-f38020.svg?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare Tunnel">
   <img src="https://img.shields.io/badge/Cloudflare%20Access-Supported-f38020.svg?style=for-the-badge" alt="Cloudflare Access">
@@ -15,6 +16,33 @@
 </p>
 
 <br>
+
+## About This Branch (`netlify` - Serverless Edge Deployment)
+
+This branch adapts the [Backyard Monsters Refitted Web Launcher](https://github.com/sPROFFEs/backyard-monsters-refitted-webplayer) for **zero-server deployment on Netlify** using static CDN hosting for the game client/Ruffle WebAssembly runtime and **Netlify Edge Functions** for the reverse proxy, authentication bridge, and Cloudflare Access gateway.
+
+### Deploy to Netlify (Step-by-Step)
+
+1. Push or select the `netlify` branch in [sPROFFEs/backyard-monsters-refitted-webplayer](https://github.com/sPROFFEs/backyard-monsters-refitted-webplayer).
+2. In **Netlify**, choose **Add new site > Import an existing project** and connect your GitHub repository.
+3. Select branch **`netlify`**.
+4. Netlify automatically detects [`netlify.toml`](./netlify.toml):
+   - **Publish directory**: `web-launcher/public`
+   - **Edge Functions directory**: `web-launcher/netlify/edge-functions`
+   - **Build command**: *(none required — Ruffle WASM and SWF assets are pre-bundled)*
+5. *(Optional)* Configure **Environment variables** under **Site configuration > Environment variables** (scoped to **Functions / Edge Functions**):
+   - `DEFAULT_SERVER_URL` (default: `https://server.bymrefitted.com/`)
+   - `DEFAULT_CDN_URL` (default: `https://cdn.bymrefitted.com/`)
+   - `CF_ACCESS_CLIENT_ID` (if your custom backend is behind Cloudflare Access)
+   - `CF_ACCESS_CLIENT_SECRET` (if your custom backend is behind Cloudflare Access)
+6. Click **Deploy site**.
+
+### Important Note on Internal IPs & `localhost`
+- Because Netlify Edge Functions run on Netlify's global cloud network, **Edge Proxy mode cannot reach internal LAN IPs (`192.168.x.x`) or `localhost`**.
+- To connect to a self-hosted private server from Netlify, expose that server publicly (for example, via a **Cloudflare Tunnel**, optionally protected with **Cloudflare Access** Service Tokens).
+- If you want to test against a `localhost:3001` server on your own machine, switch **Connection Mode** to **Direct Connection** in the launcher settings.
+
+---
 
 ## About This Fork (Web Player & Docker Launcher)
 

@@ -221,6 +221,24 @@ If your backend is behind Cloudflare Access (Cloudflare Zero Trust application g
 
 ---
 
+## Deployment on Netlify (Branch `netlify`)
+
+This branch includes [`netlify.toml`](../netlify.toml) and Netlify Edge Functions so the launcher can run serverlessly on Netlify without Docker:
+
+1. Connect your repository to Netlify and select the **`netlify`** branch.
+2. Netlify will automatically read `netlify.toml`:
+   - **Publish directory**: `web-launcher/public`
+   - **Edge Functions**: `web-launcher/netlify/edge-functions`
+3. *(Optional)* Set Environment Variables in the Netlify UI (**Site configuration > Environment variables**, scoped to Functions / Edge Functions):
+   - `DEFAULT_SERVER_URL`: default `https://server.bymrefitted.com/`
+   - `DEFAULT_CDN_URL`: default `https://cdn.bymrefitted.com/`
+   - `CF_ACCESS_CLIENT_ID`: Cloudflare Access Service Token Client ID
+   - `CF_ACCESS_CLIENT_SECRET`: Cloudflare Access Service Token Client Secret
+
+> Note: Netlify Edge Functions execute in Netlify's cloud and cannot reach internal LAN IPs (`192.168.x.x`) or `localhost`. Use publicly exposed endpoints (such as the official server or your own Cloudflare Tunnel), or switch to **Direct Connection** mode when running a backend on your local computer.
+
+---
+
 ## Project Structure
 
 ```
@@ -228,7 +246,14 @@ web-launcher/
 ├── Dockerfile                  # Container definition (Node 20 Alpine)
 ├── docker-compose.yml          # Standalone compose file
 ├── package.json                # Dependencies (Express, CORS, Ruffle)
-├── server.js                   # Web server, reverse proxy, and gateway handler
+├── server.js                   # Express web server, reverse proxy, and gateway handler
+├── netlify/                    # Serverless Netlify Edge Functions (used on branch `netlify`)
+│   ├── package.json            # Marks ESM module scope for Edge Functions
+│   ├── lib/
+│   │   └── gateway.js          # Shared cookie, CORS, and Cloudflare Access header helpers
+│   └── edge-functions/
+│       ├── launcher-api.js     # /api/launcher/* (config, ping, login)
+│       └── proxy.js            # /proxy/server/* and /proxy/cdn/* streaming proxy
 ├── public/                     # Static web assets
 │   ├── index.html              # Web launcher user interface
 │   ├── app.js                  # Client state, endpoint switcher, and Ruffle loader

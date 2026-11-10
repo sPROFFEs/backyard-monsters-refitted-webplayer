@@ -18,7 +18,8 @@
     rufflePlayer: null,
     isPinging: false,
     pingMs: null,
-    serverOnline: false
+    serverOnline: false,
+    proxyLabel: "Edge Proxy"
   };
 
   try {
@@ -247,7 +248,7 @@
     if (state.proxyMode === "proxy") {
       effectiveServerUrl = ensureTrailingSlash(window.location.origin + "/proxy/server");
       effectiveCdnUrl = ensureTrailingSlash(window.location.origin + "/proxy/cdn");
-      elements.connectionModeTag.textContent = "Mode: Docker Proxy";
+      elements.connectionModeTag.textContent = `Mode: ${state.proxyLabel}`;
       elements.connectionModeTag.style.borderColor = "rgba(59, 130, 246, 0.4)";
     } else {
       effectiveServerUrl = ensureTrailingSlash(state.serverUrl);
@@ -617,7 +618,15 @@
     try {
       const configRes = await fetch("/api/launcher/config");
       const config = await configRes.json();
-      log(`Server config loaded. Default server: ${config.defaultServerUrl}`, "info");
+      state.proxyLabel = config.runtime === "netlify-edge" ? "Edge Proxy" : "Docker Proxy";
+      if (!localStorage.getItem("bymr_server_url") && config.defaultServerUrl) {
+        state.serverUrl = config.defaultServerUrl;
+        state.cdnUrl = config.defaultCdnUrl || config.defaultServerUrl;
+        if (state.serverUrl !== "https://server.bymrefitted.com/") {
+          state.preset = "custom";
+        }
+      }
+      log(`Server config loaded (${config.runtime || "node"}). Default server: ${config.defaultServerUrl}`, "info");
     } catch (e) {
       log("Notice: Could not fetch /api/launcher/config, using local defaults", "warn");
     }
