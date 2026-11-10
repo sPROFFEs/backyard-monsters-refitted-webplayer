@@ -3,69 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Backyard Monsters: Refitted - Web Launcher</title>
+  <title>Backyard Monsters: Refitted</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="styles.css" />
-  <!-- Ruffle Flash Emulator (Local bundle with fallback) -->
   <script src="vendor/ruffle/ruffle.js"></script>
 </head>
-<body class="bg-dark">
-  <!-- Top Navigation / Status Header -->
+<body>
+  <!-- Slim Game-Themed Header -->
   <header class="app-header">
     <div class="header-left">
-      <div class="game-logo">
-        <span class="logo-text">BACKYARD MONSTERS</span>
-        <span class="logo-sub">REFITTED / WEB LAUNCHER</span>
+      <div class="brand-lockup">
+        <img src="assets/title.png" alt="Backyard Monsters" class="brand-logo-img" />
+        <span class="brand-sub">REFITTED</span>
       </div>
-      <div class="endpoint-badge" id="endpointBadge">
-        <span class="status-dot status-offline" id="statusDot"></span>
-        <span class="endpoint-name" id="currentEndpointDisplay">Checking server...</span>
-        <span class="ping-tag" id="pingDisplay">-- ms</span>
-      </div>
+
+      <button type="button" class="status-chip" id="endpointBadge" title="Click to open Server Settings">
+        <span class="status-dot status-checking" id="statusDot"></span>
+        <span class="status-host" id="currentEndpointDisplay">server.bymrefitted.com</span>
+      </button>
     </div>
 
     <div class="header-right">
-      <button class="btn btn-secondary btn-sm" id="btnOpenSettings" title="Configure Server and Endpoints">
-        Server / Endpoints
-      </button>
-
-      <!-- User Profile Pill -->
       <div class="user-pill hidden" id="userPill">
         <span class="user-name" id="userPillName">Player</span>
-        <button class="btn-logout" id="btnLogout" title="Log out">&times;</button>
+        <button type="button" class="btn-logout" id="btnLogout" title="Sign out">&times;</button>
       </div>
 
-      <button class="btn btn-primary btn-sm" id="btnOpenAuth" title="Log in to account">
-        Connect Account
+      <button type="button" class="btn btn-gold btn-sm" id="btnOpenAuth">Sign In</button>
+      <button type="button" class="btn btn-stone btn-sm" id="btnToggleFullscreen" title="Toggle Fullscreen">
+        <span id="fullscreenIcon">[ ]</span> Fullscreen
       </button>
+      <button type="button" class="btn btn-stone btn-sm" id="btnOpenSettings">Settings</button>
     </div>
   </header>
 
-  <!-- Main Content Area -->
+  <!-- Centered Backyard Monsters Game Stage -->
   <main class="app-main">
-    <!-- Game Player View -->
     <div class="player-wrapper" id="playerWrapper">
-      <!-- In-Game Floating Top Toolbar -->
-      <div class="game-toolbar" id="gameToolbar">
-        <div class="toolbar-left">
-          <span class="game-title-tag">Backyard Monsters Refitted (v1.9.2-beta)</span>
-          <span class="connection-mode-tag" id="connectionModeTag">Mode: Edge Proxy</span>
-        </div>
-        <div class="toolbar-right">
-          <button class="btn-tool" id="btnReloadGame" title="Restart game instance">
-            Reload
-          </button>
-          <div class="scale-selector">
-            <label for="scaleSelect">Scale:</label>
-            <select id="scaleSelect" class="form-select-sm">
-              <option value="fitted" selected>Fit Window</option>
-              <option value="original">Original (760x670)</option>
-              <option value="fill">Fill Screen</option>
-            </select>
+      <!-- Floating control shown only while in Fullscreen -->
+      <div class="fullscreen-hud">
+        <button type="button" class="btn btn-stone btn-sm" id="btnExitFullscreen">Exit Fullscreen</button>
+      </div>
+
+      <div class="game-frame">
+        <div class="game-viewport scale-fitted" id="gameViewport">
+          <div id="ruffleContainer" class="ruffle-container">
+            <div class="loading-splash" id="loadingSplash">
+              <div class="spinner"></div>
+              <h3>Entering the Yard...</h3>
+              <p id="splashStatusText">Loading Flash WebAssembly runtime...</p>
+            </div>
           </div>
-          <div class="lang-selector">
-            <label for="langSelect">Language:</label>
-            <select id="langSelect" class="form-select-sm">
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Unified Settings Modal -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card modal-settings">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button type="button" class="modal-close" id="btnCloseSettings">&times;</button>
+      </div>
+
+      <!-- Settings Navigation Tabs -->
+      <div class="settings-tabs">
+        <button type="button" class="settings-tab-btn active" data-settings-tab="game">Game &amp; Display</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="server">Server &amp; Gateway</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="diagnostics">Diagnostics</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab 1: Game & Display -->
+        <div class="settings-panel active" id="settingsPanelGame">
+          <div class="form-group">
+            <label for="scaleSelect">Viewport Scale:</label>
+            <select id="scaleSelect" class="form-input">
+              <option value="fitted" selected>Fit Window (Keep 760:670 Aspect Ratio)</option>
+              <option value="original">Original Size (760 x 670 px)</option>
+              <option value="fill">Fill Available Screen</option>
+            </select>
+            <span class="field-hint">Changes apply immediately without restarting the game.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="langSelect">Game Language:</label>
+            <select id="langSelect" class="form-input">
               <option value="english" selected>English</option>
               <option value="spanish">Spanish</option>
               <option value="french">French</option>
@@ -73,165 +97,165 @@
               <option value="portuguese">Portuguese</option>
               <option value="turkish">Turkish</option>
             </select>
+            <span class="field-hint">Changing language restarts the Flash client when saved.</span>
           </div>
-          <button class="btn-tool" id="btnToggleFullscreen" title="Toggle Fullscreen">
-            <span id="fullscreenIcon">[ ]</span> Fullscreen
-          </button>
-          <button class="btn-tool" id="btnToggleConsole" title="Toggle Debug Console">
-            Console
-          </button>
-        </div>
-      </div>
 
-      <!-- Flash Container -->
-      <div class="game-viewport" id="gameViewport">
-        <div id="ruffleContainer" class="ruffle-container">
-          <div class="loading-splash" id="loadingSplash">
-            <div class="spinner"></div>
-            <h3>Loading Backyard Monsters...</h3>
-            <p id="splashStatusText">Initializing Flash WebAssembly runtime...</p>
-          </div>
-        </div>
-      </div>
-    </div>
+          <div class="settings-divider"></div>
 
-    <!-- Debug Console Drawer -->
-    <div class="debug-console hidden" id="debugConsole">
-      <div class="console-header">
-        <h4>Debug & Network Console</h4>
-        <div>
-          <button class="btn-console-clear" id="btnClearLogs">Clear</button>
-          <button class="btn-console-close" id="btnCloseConsole">&times;</button>
-        </div>
-      </div>
-      <div class="console-body" id="consoleLogs">
-        <div class="log-entry log-info">[Launcher] Initializing Backyard Monsters Web Launcher...</div>
-      </div>
-    </div>
-  </main>
-
-  <!-- Modal 1: Server & Endpoint Configuration -->
-  <div class="modal-backdrop hidden" id="settingsModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>Server & Endpoint Modifier</h3>
-        <button class="modal-close" id="btnCloseSettings">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-desc">
-          Select or customize the backend server you want to connect to. By default, it connects to the official Refitted servers. If their servers are ever taken offline, you can switch to your own private server without reinstalling.
-        </p>
-
-        <!-- Presets -->
-        <div class="form-group">
-          <label>Server Preset:</label>
-          <div class="preset-grid">
-            <button type="button" class="preset-card active" data-preset="official">
-              <div class="preset-title">Official Server (Default)</div>
-              <div class="preset-sub">https://server.bymrefitted.com/</div>
-            </button>
-            <button type="button" class="preset-card" data-preset="local">
-              <div class="preset-title">Local Server (Direct Only)</div>
-              <div class="preset-sub">http://localhost:3001/</div>
-            </button>
-            <button type="button" class="preset-card" data-preset="custom">
-              <div class="preset-title">Custom Public Server</div>
-              <div class="preset-sub">Domain or Cloudflare Tunnel URL</div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Custom Inputs -->
-        <div class="form-group">
-          <label for="inputServerUrl">API Server URL:</label>
-          <input type="url" id="inputServerUrl" class="form-input" placeholder="https://server.bymrefitted.com/" />
-          <span class="field-hint">Base endpoint for the game API where bases, resources, and profiles are saved.</span>
-        </div>
-
-        <div class="form-group">
-          <label for="inputCdnUrl">Asset CDN URL:</label>
-          <input type="url" id="inputCdnUrl" class="form-input" placeholder="https://cdn.bymrefitted.com/" />
-          <span class="field-hint">Storage server for game sprites, images, and sounds.</span>
-        </div>
-
-        <!-- Cloudflare Access & Gateway Support -->
-        <div class="gateway-box">
-          <div class="gateway-header" id="gatewayToggle">
-            <strong>Access Gateway / Cloudflare Access (Optional)</strong>
-            <span class="gateway-toggle-arrow" id="gatewayToggleArrow">+</span>
-          </div>
-          <div class="gateway-content hidden" id="gatewayContent">
-            <p class="field-hint" style="margin-bottom: 0.6rem;">
-              If your backend is protected behind Cloudflare Access (Cloudflare Zero Trust) or an authentication gateway, provide the Service Token credentials here.
-            </p>
-            <div class="form-group" style="margin-bottom: 0.5rem;">
-              <label for="inputCfClientId">CF-Access-Client-Id:</label>
-              <input type="text" id="inputCfClientId" class="form-input" placeholder="e.g. 1234567890abcdef.access" autocomplete="off" />
+          <div class="action-row">
+            <div>
+              <strong>Client Controls</strong>
+              <p class="field-hint">Restart the Flash container if graphics or audio stall.</p>
             </div>
-            <div class="form-group" style="margin-bottom: 0.5rem;">
-              <label for="inputCfClientSecret">CF-Access-Client-Secret:</label>
-              <input type="password" id="inputCfClientSecret" class="form-input" placeholder="e.g. 9876543210fedcba..." autocomplete="off" />
-            </div>
-            <div class="form-group">
-              <label for="inputCustomAuthHeader">Custom Auth Header (Optional):</label>
-              <input type="text" id="inputCustomAuthHeader" class="form-input" placeholder="Header-Name: Value (e.g. Authorization: Bearer token)" />
+            <button type="button" class="btn btn-stone" id="btnReloadGame">Reload Client</button>
+          </div>
+        </div>
+
+        <!-- Tab 2: Server & Gateway -->
+        <div class="settings-panel" id="settingsPanelServer">
+          <p class="modal-desc">
+            Select which server to authenticate and play against. Official Refitted servers are selected by default, or you can point to any self-hosted server.
+          </p>
+
+          <div class="form-group">
+            <label>Server Preset:</label>
+            <div class="preset-grid">
+              <button type="button" class="preset-card active" data-preset="official">
+                <div class="preset-title">Official (Default)</div>
+                <div class="preset-sub">server.bymrefitted.com</div>
+              </button>
+              <button type="button" class="preset-card" data-preset="local">
+                <div class="preset-title">Local (Direct Only)</div>
+                <div class="preset-sub">localhost:3001</div>
+              </button>
+              <button type="button" class="preset-card" data-preset="custom">
+                <div class="preset-title">Custom Server</div>
+                <div class="preset-sub">Domain or Tunnel URL</div>
+              </button>
             </div>
           </div>
-        </div>
 
-        <!-- Connection Mode -->
-        <div class="form-group">
-          <label>Connection Mode:</label>
-          <div class="radio-options">
-            <label class="radio-label">
-              <input type="radio" name="proxyMode" value="proxy" checked />
-              <span><strong>Server / Edge Proxy (Recommended)</strong> &mdash; Prevents CORS and Mixed Content blocks and forwards Cloudflare Access headers. Requires a publicly reachable endpoint.</span>
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="proxyMode" value="direct" />
-              <span><strong>Direct Connection</strong> &mdash; Browser sends requests directly to the target server (required for localhost backends).</span>
-            </label>
+          <div class="form-group">
+            <label for="inputServerUrl">API Server URL:</label>
+            <input type="url" id="inputServerUrl" class="form-input" placeholder="https://server.bymrefitted.com/" />
+          </div>
+
+          <div class="form-group">
+            <label for="inputCdnUrl">Asset CDN URL:</label>
+            <input type="url" id="inputCdnUrl" class="form-input" placeholder="https://cdn.bymrefitted.com/" />
+          </div>
+
+          <div class="form-group">
+            <label>Connection Mode:</label>
+            <div class="radio-options">
+              <label class="radio-label">
+                <input type="radio" name="proxyMode" value="proxy" checked />
+                <span><strong>Proxy Mode (Recommended)</strong> &mdash; Avoids CORS/Mixed-Content blocks and forwards Access headers. Requires a public endpoint.</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="proxyMode" value="direct" />
+                <span><strong>Direct Connection</strong> &mdash; Connects straight from your browser (required for localhost backends).</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Cloudflare Access & Gateway Support -->
+          <div class="gateway-box">
+            <div class="gateway-header" id="gatewayToggle">
+              <strong>Access Gateway / Cloudflare Access (Optional)</strong>
+              <span class="gateway-toggle-arrow" id="gatewayToggleArrow">+</span>
+            </div>
+            <div class="gateway-content hidden" id="gatewayContent">
+              <p class="field-hint" style="margin-bottom: 0.6rem;">
+                Attach Cloudflare Access Service Token headers when connecting to a protected private backend.
+              </p>
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label for="inputCfClientId">CF-Access-Client-Id:</label>
+                <input type="text" id="inputCfClientId" class="form-input" placeholder="e.g. 1234567890abcdef.access" autocomplete="off" />
+              </div>
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label for="inputCfClientSecret">CF-Access-Client-Secret:</label>
+                <input type="password" id="inputCfClientSecret" class="form-input" placeholder="Service token secret" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label for="inputCustomAuthHeader">Custom Auth Header (Optional):</label>
+                <input type="text" id="inputCustomAuthHeader" class="form-input" placeholder="Header-Name: Value" />
+              </div>
+            </div>
+          </div>
+
+          <div class="ping-section">
+            <button type="button" class="btn btn-stone" id="btnTestConnection">Test Connection</button>
+            <button type="button" class="btn btn-stone" id="btnResetOfficial">Reset to Official</button>
+            <span class="test-result" id="testResultText"></span>
           </div>
         </div>
 
-        <!-- Ping Tester -->
-        <div class="ping-section">
-          <button type="button" class="btn btn-secondary" id="btnTestConnection">
-            Test Connection
-          </button>
-          <span class="test-result" id="testResultText"></span>
+        <!-- Tab 3: Diagnostics -->
+        <div class="settings-panel" id="settingsPanelDiagnostics">
+          <div class="diag-grid">
+            <div class="diag-item">
+              <span class="diag-label">Runtime</span>
+              <span class="diag-val" id="diagRuntime">--</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Connection Mode</span>
+              <span class="diag-val" id="connectionModeTag">--</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Latency</span>
+              <span class="diag-val" id="pingDisplay">-- ms</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">API Endpoint</span>
+              <span class="diag-val diag-mono" id="diagApiUrl">--</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">CDN Endpoint</span>
+              <span class="diag-val diag-mono" id="diagCdnUrl">--</span>
+            </div>
+          </div>
+
+          <div class="console-panel">
+            <div class="console-header">
+              <span>Launcher &amp; Client Log</span>
+              <button type="button" class="btn-console-clear" id="btnClearLogs">Clear</button>
+            </div>
+            <div class="console-body" id="consoleLogs">
+              <div class="log-entry log-info">[Launcher] Initializing Backyard Monsters Web Launcher...</div>
+            </div>
+          </div>
         </div>
       </div>
+
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="btnResetOfficial" title="Reset to official default server">Reset to Official</button>
-        <button type="button" class="btn btn-secondary" id="btnCancelSettings">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btnSaveSettings">Save & Connect</button>
+        <button type="button" class="btn btn-stone" id="btnCancelSettings">Cancel</button>
+        <button type="button" class="btn btn-gold" id="btnSaveSettings">Save &amp; Apply</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal 2: Authentication / Account Login -->
+  <!-- Authentication Modal -->
   <div class="modal-backdrop hidden" id="authModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Sign In to Game Server</h3>
-        <button class="modal-close" id="btnCloseAuth">&times;</button>
+        <h3>Sign In</h3>
+        <button type="button" class="modal-close" id="btnCloseAuth">&times;</button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">
-          Sign in with your game account to load your village directly without entering credentials on every reload.
+          Sign in to your account to enter your yard automatically, or use the classic in-game login screen.
         </p>
 
         <div class="tabs">
-          <button class="tab-btn active" data-tab="credentials">Email & Password</button>
-          <button class="tab-btn" data-tab="token">Direct JWT Token</button>
+          <button type="button" class="tab-btn active" data-tab="credentials">Email &amp; Password</button>
+          <button type="button" class="tab-btn" data-tab="token">JWT Token</button>
         </div>
 
-        <!-- Form 1: Email & Password -->
         <form id="formCredentials" class="tab-content active">
           <div class="form-group">
             <label for="authEmail">Email Address:</label>
-            <input type="email" id="authEmail" class="form-input" placeholder="user@example.com" required />
+            <input type="email" id="authEmail" class="form-input" placeholder="player@example.com" required />
           </div>
           <div class="form-group">
             <label for="authPassword">Password:</label>
@@ -240,33 +264,31 @@
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" id="authRemember" checked />
-              <span>Remember login on this browser</span>
+              <span>Keep me signed in on this browser</span>
             </label>
           </div>
           <div class="auth-error-msg hidden" id="authErrorMsg"></div>
           <div class="modal-footer no-padding">
-            <button type="button" class="btn btn-secondary" id="btnPlayAsGuest">Play with In-Game Login</button>
-            <button type="submit" class="btn btn-primary" id="btnSubmitLogin">Sign In & Play</button>
+            <button type="button" class="btn btn-stone" id="btnPlayAsGuest">In-Game Login</button>
+            <button type="submit" class="btn btn-gold" id="btnSubmitLogin">Sign In &amp; Play</button>
           </div>
         </form>
 
-        <!-- Form 2: Direct Token -->
         <form id="formToken" class="tab-content">
           <div class="form-group">
             <label for="authTokenInput">Session JWT Token:</label>
             <textarea id="authTokenInput" class="form-input token-area" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
-            <span class="field-hint">Paste a token generated by the desktop launcher or API.</span>
+            <span class="field-hint">Paste an existing launcher session token.</span>
           </div>
           <div class="modal-footer no-padding">
-            <button type="button" class="btn btn-secondary" id="btnCancelToken">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="btnSubmitToken">Use Token</button>
+            <button type="button" class="btn btn-stone" id="btnCancelToken">Cancel</button>
+            <button type="submit" class="btn btn-gold" id="btnSubmitToken">Apply Token</button>
           </div>
         </form>
       </div>
     </div>
   </div>
 
-  <!-- Main Application Logic -->
   <script src="app.js"></script>
 </body>
 </html>
