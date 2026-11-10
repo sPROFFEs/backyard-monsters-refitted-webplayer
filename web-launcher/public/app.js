@@ -290,7 +290,7 @@
         unmuteOverlay: "hidden",
         letterbox: "on",
         warnOnUnsupportedContent: false,
-        allowScriptAccess: true,
+        allowScriptAccess: false,
         quality: "high",
         parameters: {
           serverUrl: effectiveServerUrl,
@@ -304,9 +304,10 @@
       elements.ruffleContainer.appendChild(player);
 
       // Load SWF
-      elements.splashStatusText.textContent = "Loading client SWF binary (v128.5690)...";
+      elements.splashStatusText.textContent = "Loading BYMR client SWF (v1.9.2-beta)...";
       await player.load({
         url: "/swfs/bymr-client.swf",
+        allowScriptAccess: false,
         parameters: player.config.parameters
       });
 
@@ -495,7 +496,7 @@
           serverUrl: state.serverUrl,
           email,
           password,
-          sessionType: "game",
+          sessionType: "launcher",
           cfClientId: state.cfClientId,
           cfClientSecret: state.cfClientSecret,
           customAuthHeader: state.customAuthHeader
@@ -519,7 +520,7 @@
         elements.authModal.classList.add("hidden");
         launchGame();
       } else {
-        elements.authErrorMsg.textContent = data.message || "Invalid credentials or user not found.";
+        elements.authErrorMsg.textContent = data.message || data.errorDetails?.message || (typeof data.error === "string" ? data.error : null) || "Invalid credentials or user not found.";
         elements.authErrorMsg.classList.remove("hidden");
         log(`Authentication error: ${elements.authErrorMsg.textContent}`, "warn");
       }
