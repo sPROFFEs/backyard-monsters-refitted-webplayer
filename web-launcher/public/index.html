@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Backyard Monsters: Refitted</title>
   <link rel="icon" type="image/png" href="favicon.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20261111b" />
   <script src="vendor/ruffle/ruffle.js?v=0.8.0-20261111"></script>
 </head>
 <body>
@@ -103,12 +103,11 @@
           <div class="form-group">
             <label for="rendererSelect">Graphics Renderer:</label>
             <select id="rendererSelect" class="form-input">
-              <option value="webgl" selected>WebGL (Fast / Recommended)</option>
-              <option value="webgpu">WebGPU (Experimental)</option>
-              <option value="wgpu-webgl">WGPU-WebGL (Compatibility)</option>
+              <option value="wgpu-webgl" selected>WGPU-WebGL (Recommended / Full BitmapData)</option>
+              <option value="webgpu">WebGPU (Experimental Hardware Acceleration)</option>
               <option value="auto">Auto (Ruffle Default)</option>
             </select>
-            <span class="field-hint">WebGL reduces main-thread frame stalls and hover glitches compared to WGPU-WebGL. Restarts client when saved.</span>
+            <span class="field-hint">WGPU-WebGL supports BitmapData.draw() and Flash filters required by the game. WebGPU may improve speed on supported GPUs. Restarts client when saved.</span>
           </div>
 
           <div class="form-group">
@@ -326,6 +325,6 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20261111b"></script>
 </body>
 </html>
