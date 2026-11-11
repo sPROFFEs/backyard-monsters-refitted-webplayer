@@ -6,7 +6,7 @@
   <title>Backyard Monsters: Refitted</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="styles.css" />
-  <script src="vendor/ruffle/ruffle.js"></script>
+  <script src="vendor/ruffle/ruffle.js?v=0.8.0-20261111"></script>
 </head>
 <body>
   <!-- Slim Game-Themed Header -->
@@ -100,6 +100,36 @@
             <span class="field-hint">Changing language restarts the Flash client when saved.</span>
           </div>
 
+          <div class="form-group">
+            <label for="rendererSelect">Graphics Renderer:</label>
+            <select id="rendererSelect" class="form-input">
+              <option value="webgl" selected>WebGL (Fast / Recommended)</option>
+              <option value="webgpu">WebGPU (Experimental)</option>
+              <option value="wgpu-webgl">WGPU-WebGL (Compatibility)</option>
+              <option value="auto">Auto (Ruffle Default)</option>
+            </select>
+            <span class="field-hint">WebGL reduces main-thread frame stalls and hover glitches compared to WGPU-WebGL. Restarts client when saved.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="qualitySelect">Graphics Quality:</label>
+            <select id="qualitySelect" class="form-input">
+              <option value="low">Low (Best FPS &amp; Audio Stability)</option>
+              <option value="medium" selected>Medium (Balanced - Recommended)</option>
+              <option value="high">High (4x MSAA / Heavy)</option>
+            </select>
+            <span class="field-hint">Lowering quality prevents Flash render spikes that cause audio crackling. Restarts client when saved.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="fontRendererSelect">Device Font Renderer:</label>
+            <select id="fontRendererSelect" class="form-input">
+              <option value="embedded" selected>Embedded (Vector Default)</option>
+              <option value="canvas">Canvas (System Fonts)</option>
+            </select>
+            <span class="field-hint">Switch to Canvas if unembedded card/tooltip text flickers on hover. Restarts client when saved.</span>
+          </div>
+
           <div class="settings-divider"></div>
 
           <div class="action-row">
@@ -157,6 +187,13 @@
                 <span><strong>Direct Connection</strong> &mdash; Connects straight from your browser (required for localhost backends).</span>
               </label>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label" style="background-color: #141714; padding: 0.7rem; border-radius: 6px; border: 1px solid var(--stone-border);">
+              <input type="checkbox" id="directCdnCheck" checked />
+              <span><strong>Direct Asset CDN (Recommended)</strong> &mdash; Load sprites, music, and SFX directly from HTTPS Asset CDNs instead of routing static media through the proxy. Uncheck if a custom CDN blocks CORS. Automatically bypassed when Access Gateway headers are set.</span>
+            </label>
           </div>
 
           <!-- Cloudflare Access & Gateway Support -->
