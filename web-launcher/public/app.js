@@ -14,6 +14,10 @@
     userProfile: null,
     language: localStorage.getItem("bymr_language") || "english",
     scale: localStorage.getItem("bymr_scale") || "fitted",
+    renderer: localStorage.getItem("bymr_renderer") || "webgl",
+    quality: localStorage.getItem("bymr_quality") || "medium",
+    fontRenderer: localStorage.getItem("bymr_font_renderer") || "embedded",
+    directCdn: localStorage.getItem("bymr_direct_cdn") !== "false",
     preset: localStorage.getItem("bymr_preset") || "official",
     rufflePlayer: null,
     isPinging: false,
@@ -61,6 +65,9 @@
     // Settings -> Game & Display
     scaleSelect: document.getElementById("scaleSelect"),
     langSelect: document.getElementById("langSelect"),
+    rendererSelect: document.getElementById("rendererSelect"),
+    qualitySelect: document.getElementById("qualitySelect"),
+    fontRendererSelect: document.getElementById("fontRendererSelect"),
     btnReloadGame: document.getElementById("btnReloadGame"),
 
     // Settings -> Server & Gateway
@@ -77,6 +84,7 @@
     testResultText: document.getElementById("testResultText"),
     presetCards: document.querySelectorAll(".preset-card"),
     proxyRadios: document.querySelectorAll("input[name='proxyMode']"),
+    directCdnCheck: document.getElementById("directCdnCheck"),
 
     // Settings -> Diagnostics & Logs
     diagRuntime: document.getElementById("diagRuntime"),
@@ -311,15 +319,21 @@
     elements.loadingSplash.classList.remove("hidden");
     elements.splashStatusText.textContent = "Initializing Ruffle Flash emulator...";
 
+    const targetCdnUrl = ensureTrailingSlash(state.cdnUrl);
     let effectiveServerUrl;
     let effectiveCdnUrl;
 
     if (state.proxyMode === "proxy") {
       effectiveServerUrl = ensureTrailingSlash(window.location.origin + "/proxy/server");
-      effectiveCdnUrl = ensureTrailingSlash(window.location.origin + "/proxy/cdn");
+      const hasGatewayAuth = Boolean(state.cfClientId || state.cfClientSecret || state.customAuthHeader);
+      if (state.directCdn && !hasGatewayAuth && targetCdnUrl.startsWith("https://")) {
+        effectiveCdnUrl = targetCdnUrl;
+      } else {
+        effectiveCdnUrl = ensureTrailingSlash(window.location.origin + "/proxy/cdn");
+      }
     } else {
       effectiveServerUrl = ensureTrailingSlash(state.serverUrl);
-      effectiveCdnUrl = ensureTrailingSlash(state.cdnUrl);
+      effectiveCdnUrl = targetCdnUrl;
     }
 
     updateDiagnosticsUI(effectiveServerUrl, effectiveCdnUrl);
@@ -331,6 +345,7 @@
         state.rufflePlayer.remove();
       } catch (e) {}
       state.rufflePlayer = null;
+      await new Promise(resolve => setTimeout(resolve, 120));
     }
 
     if (!window.RufflePlayer) {
@@ -351,13 +366,16 @@
 
       // Keep allowScriptAccess disabled so ExternalInterface.available is false,
       // which sets GLOBAL._local = true inside the BYMR client and enables HTTP/launcher auth.
-      player.config = {
+      const ruffleConfig = {
         autoplay: "on",
         unmuteOverlay: "hidden",
         letterbox: "on",
+        wmode: "opaque",
+        backgroundColor: "#000000",
         warnOnUnsupportedContent: false,
         allowScriptAccess: false,
-        quality: "high",
+        quality: state.quality || "medium",
+        deviceFontRenderer: state.fontRenderer || "embedded",
         parameters: {
           serverUrl: effectiveServerUrl,
           cdnUrl: effectiveCdnUrl,
@@ -365,15 +383,16 @@
           language: state.language || "english"
         }
       };
+      if (state.renderer && state.renderer !== "auto") {
+        ruffleConfig.preferredRenderer = state.renderer;
+      }
+
+      player.config = ruffleConfig;
 
       elements.ruffleContainer.appendChild(player);
 
       elements.splashStatusText.textContent = "Loading BYMR client SWF (v1.9.2-beta)...";
-      await player.load({
-        url: "/swfs/bymr-client.swf?v=1.9.2-beta",
-        allowScriptAccess: false,
-        parameters: player.config.parameters
-      });
+      await player.load(Object.assign({ url: "/swfs/bymr-client.swf?v=1.9.2-beta" }, ruffleConfig));
 
       elements.loadingSplash.classList.add("hidden");
       log("Client SWF loaded successfully in Ruffle", "success");
@@ -425,6 +444,10 @@
   function openSettingsModal(initialTab = "game") {
     elements.scaleSelect.value = state.scale;
     elements.langSelect.value = state.language;
+    elements.rendererSelect.value = state.renderer;
+    elements.qualitySelect.value = state.quality;
+    elements.fontRendererSelect.value = state.fontRenderer;
+    elements.directCdnCheck.checked = state.directCdn;
     elements.inputServerUrl.value = state.serverUrl;
     elements.inputCdnUrl.value = state.cdnUrl;
     elements.inputCfClientId.value = state.cfClientId || "";
@@ -514,6 +537,10 @@
     const newServer = ensureTrailingSlash(elements.inputServerUrl.value.trim());
     const newCdn = ensureTrailingSlash(elements.inputCdnUrl.value.trim() || newServer);
     const newLang = elements.langSelect.value;
+    const newRenderer = elements.rendererSelect.value;
+    const newQuality = elements.qualitySelect.value;
+    const newFontRenderer = elements.fontRendererSelect.value;
+    const newDirectCdn = elements.directCdnCheck.checked;
     const newCfId = elements.inputCfClientId.value.trim();
     const newCfSecret = elements.inputCfClientSecret.value.trim();
     const newCustomHeader = elements.inputCustomAuthHeader.value.trim();
@@ -532,6 +559,10 @@
       newCdn !== state.cdnUrl ||
       selectedMode !== state.proxyMode ||
       newLang !== state.language ||
+      newRenderer !== state.renderer ||
+      newQuality !== state.quality ||
+      newFontRenderer !== state.fontRenderer ||
+      newDirectCdn !== state.directCdn ||
       newCfId !== state.cfClientId ||
       newCfSecret !== state.cfClientSecret ||
       newCustomHeader !== state.customAuthHeader;
@@ -540,6 +571,10 @@
     state.cdnUrl = newCdn;
     state.proxyMode = selectedMode;
     state.language = newLang;
+    state.renderer = newRenderer;
+    state.quality = newQuality;
+    state.fontRenderer = newFontRenderer;
+    state.directCdn = newDirectCdn;
     state.cfClientId = newCfId;
     state.cfClientSecret = newCfSecret;
     state.customAuthHeader = newCustomHeader;
@@ -549,6 +584,10 @@
     localStorage.setItem("bymr_proxy_mode", selectedMode);
     localStorage.setItem("bymr_preset", state.preset);
     localStorage.setItem("bymr_language", newLang);
+    localStorage.setItem("bymr_renderer", newRenderer);
+    localStorage.setItem("bymr_quality", newQuality);
+    localStorage.setItem("bymr_font_renderer", newFontRenderer);
+    localStorage.setItem("bymr_direct_cdn", String(newDirectCdn));
     localStorage.setItem("bymr_cf_client_id", newCfId);
     localStorage.setItem("bymr_cf_client_secret", newCfSecret);
     localStorage.setItem("bymr_custom_auth_header", newCustomHeader);

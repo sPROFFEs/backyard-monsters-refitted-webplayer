@@ -122,7 +122,14 @@ function resolveGatewayHeaders(req) {
 app.get("/api/launcher/ping", async (req, res) => {
   const target = req.query.target || DEFAULT_SERVER_URL;
   const startTime = Date.now();
-  
+  let settled = false;
+
+  const finishPing = (payload) => {
+    if (settled || res.headersSent) return;
+    settled = true;
+    res.json(payload);
+  };
+
   try {
     const targetUrl = new URL(target.endsWith("/") ? target + "connection" : target + "/connection");
     const client = targetUrl.protocol === "https:" ? https : http;
@@ -137,7 +144,8 @@ app.get("/api/launcher/ping", async (req, res) => {
       }
     }, (response) => {
       const latency = Date.now() - startTime;
-      res.json({
+      response.resume();
+      finishPing({
         ok: response.statusCode >= 200 && response.statusCode < 400,
         statusCode: response.statusCode,
         latencyMs: latency,
@@ -146,7 +154,7 @@ app.get("/api/launcher/ping", async (req, res) => {
     });
 
     request.on("error", (err) => {
-      res.json({
+      finishPing({
         ok: false,
         error: err.message,
         latencyMs: Date.now() - startTime,
@@ -156,7 +164,7 @@ app.get("/api/launcher/ping", async (req, res) => {
 
     request.on("timeout", () => {
       request.destroy();
-      res.json({
+      finishPing({
         ok: false,
         error: "Connection timeout to remote server",
         latencyMs: 5000,
@@ -166,7 +174,7 @@ app.get("/api/launcher/ping", async (req, res) => {
 
     request.end();
   } catch (err) {
-    res.json({
+    finishPing({
       ok: false,
       error: "Invalid URL: " + err.message,
       latencyMs: 0,
@@ -183,6 +191,7 @@ app.post("/api/launcher/login", jsonParser, async (req, res) => {
   const { serverUrl, email, password, token, sessionType = "game", cfClientId, cfClientSecret, customAuthHeader } = req.body;
   const targetServer = (serverUrl || DEFAULT_SERVER_URL).replace(/\/$/, "");
   const loginUrl = `${targetServer}/api/v1.9.2-beta/player/getinfo`;
+  let settled = false;
 
   try {
     const parsedUrl = new URL(loginUrl);
@@ -210,6 +219,8 @@ app.post("/api/launcher/login", jsonParser, async (req, res) => {
       let data = "";
       proxyRes.on("data", (chunk) => { data += chunk; });
       proxyRes.on("end", () => {
+        if (settled || res.headersSent) return;
+        settled = true;
         try {
           const json = JSON.parse(data);
           res.status(proxyRes.statusCode).json(json);
@@ -220,13 +231,25 @@ app.post("/api/launcher/login", jsonParser, async (req, res) => {
     });
 
     proxyReq.on("error", (err) => {
+      if (settled || res.headersSent) return;
+      settled = true;
       res.status(502).json({ error: 1, message: "Error connecting to auth server: " + err.message });
+    });
+
+    proxyReq.on("timeout", () => {
+      proxyReq.destroy();
+      if (settled || res.headersSent) return;
+      settled = true;
+      res.status(504).json({ error: 1, message: "Gateway timeout connecting to auth server" });
     });
 
     proxyReq.write(payload);
     proxyReq.end();
   } catch (err) {
-    res.status(400).json({ error: 1, message: "Invalid URL: " + err.message });
+    if (!settled && !res.headersSent) {
+      settled = true;
+      res.status(400).json({ error: 1, message: "Invalid URL: " + err.message });
+    }
   }
 });
 

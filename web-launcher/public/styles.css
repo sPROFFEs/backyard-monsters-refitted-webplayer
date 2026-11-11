@@ -39,7 +39,6 @@ body {
     url("assets/grass-bg.png");
   background-size: cover, 220px 220px;
   background-repeat: no-repeat, repeat;
-  background-attachment: fixed;
 }
 
 /* Slim Wooden Header Bar */
