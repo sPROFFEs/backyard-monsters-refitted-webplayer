@@ -2,6 +2,15 @@
 (function() {
   "use strict";
 
+  function resolveInitialRenderer() {
+    const saved = localStorage.getItem("bymr_renderer");
+    if (!saved || saved === "webgl" || saved === "canvas") {
+      if (saved) localStorage.setItem("bymr_renderer", "wgpu-webgl");
+      return "wgpu-webgl";
+    }
+    return saved;
+  }
+
   // Application State
   const state = {
     serverUrl: localStorage.getItem("bymr_server_url") || "https://server.bymrefitted.com/",
@@ -14,7 +23,7 @@
     userProfile: null,
     language: localStorage.getItem("bymr_language") || "english",
     scale: localStorage.getItem("bymr_scale") || "fitted",
-    renderer: localStorage.getItem("bymr_renderer") || "webgl",
+    renderer: resolveInitialRenderer(),
     quality: localStorage.getItem("bymr_quality") || "medium",
     fontRenderer: localStorage.getItem("bymr_font_renderer") || "embedded",
     directCdn: localStorage.getItem("bymr_direct_cdn") !== "false",
@@ -383,7 +392,7 @@
           language: state.language || "english"
         }
       };
-      if (state.renderer && state.renderer !== "auto") {
+      if (state.renderer && state.renderer !== "auto" && state.renderer !== "webgl" && state.renderer !== "canvas") {
         ruffleConfig.preferredRenderer = state.renderer;
       }
 
