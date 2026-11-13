@@ -2,6 +2,12 @@
 (function() {
   "use strict";
 
+  const isGitHubPages =
+    typeof window !== "undefined" &&
+    (window.location.hostname.endsWith(".github.io") ||
+      window.location.hostname.endsWith(".githubpages.io") ||
+      window.location.hostname.includes("pages.dev"));
+
   function resolveInitialRenderer() {
     const saved = localStorage.getItem("bymr_renderer");
     if (!saved || saved === "webgl" || saved === "canvas") {
@@ -11,11 +17,17 @@
     return saved;
   }
 
+  function resolveInitialProxyMode() {
+    const saved = localStorage.getItem("bymr_proxy_mode");
+    if (saved) return saved;
+    return isGitHubPages ? "direct" : "proxy";
+  }
+
   // Application State
   const state = {
     serverUrl: localStorage.getItem("bymr_server_url") || "https://server.bymrefitted.com/",
     cdnUrl: localStorage.getItem("bymr_cdn_url") || "https://cdn.bymrefitted.com/",
-    proxyMode: localStorage.getItem("bymr_proxy_mode") || "proxy",
+    proxyMode: resolveInitialProxyMode(),
     token: localStorage.getItem("bymr_auth_token") || "",
     cfClientId: localStorage.getItem("bymr_cf_client_id") || "",
     cfClientSecret: localStorage.getItem("bymr_cf_client_secret") || "",
@@ -32,8 +44,8 @@
     isPinging: false,
     pingMs: null,
     serverOnline: false,
-    runtimeName: "node",
-    proxyLabel: "Edge Proxy"
+    runtimeName: isGitHubPages ? "github-pages" : "node",
+    proxyLabel: isGitHubPages ? "Direct Browser" : "Edge Proxy"
   };
 
   try {
@@ -157,9 +169,13 @@
       document.cookie = "bymr_custom_auth_header=; path=/; max-age=0";
     }
 
-    log(`Proxy target updated: server=${state.serverUrl}`, "info");
-    if (state.cfClientId) {
-      log("Cloudflare Access Service Token attached to proxy headers", "info");
+    if (state.proxyMode === "proxy") {
+      log(`Proxy target updated: server=${state.serverUrl}`, "info");
+      if (state.cfClientId) {
+        log("Cloudflare Access Service Token attached to proxy headers", "info");
+      }
+    } else {
+      log(`Connection target: server=${state.serverUrl} [direct]`, "info");
     }
   }
 
@@ -180,14 +196,61 @@
     elements.currentEndpointDisplay.textContent = hostname;
     elements.pingDisplay.textContent = "Checking...";
 
+    async function directPing() {
+      const startTime = performance.now();
+      const testUrl = ensureTrailingSlash(targetUrl) + "connection";
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      try {
+        const res = await fetch(testUrl, {
+          method: "GET",
+          mode: "cors",
+          cache: "no-store",
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const latency = Math.max(1, Math.round(performance.now() - startTime));
+        if (res.ok) {
+          state.serverOnline = true;
+          state.pingMs = latency;
+          elements.statusDot.className = "status-dot status-online";
+          elements.pingDisplay.textContent = `${latency} ms`;
+          elements.endpointBadge.title = `${hostname} (${latency} ms) - Click for Server Settings`;
+          log(`Ping to ${targetUrl} successful (${latency}ms) [direct]`, "success");
+          return { ok: true, latency };
+        } else {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        clearTimeout(timeoutId);
+        state.serverOnline = false;
+        elements.statusDot.className = "status-dot status-offline";
+        elements.pingDisplay.textContent = "Offline";
+        elements.endpointBadge.title = `${hostname} (Offline) - Click for Server Settings`;
+        const errMsg = err.name === "AbortError" ? "Timed out (7s)" : err.message;
+        log(`Ping to ${targetUrl} failed: ${errMsg}`, "warn");
+        return { ok: false, error: errMsg };
+      }
+    }
+
+    if (state.proxyMode === "direct" || isGitHubPages) {
+      return await directPing();
+    }
+
     try {
       const headers = {};
       if (state.cfClientId) headers["x-cf-access-client-id"] = state.cfClientId;
       if (state.cfClientSecret) headers["x-cf-access-client-secret"] = state.cfClientSecret;
       if (state.customAuthHeader) headers["x-custom-auth-header"] = state.customAuthHeader;
 
-      const res = await fetch(`/api/launcher/ping?target=${encodeURIComponent(targetUrl)}`, { headers });
-      const data = await res.json();
+      const pingUrl = `/api/launcher/ping?target=${encodeURIComponent(targetUrl)}`;
+      const res = await fetch(pingUrl, { headers }).catch(() => null);
+      if (!res || !res.ok) {
+        return await directPing();
+      }
+
+      const data = await res.json().catch(() => null);
+      if (!data) return await directPing();
 
       if (data.ok) {
         state.serverOnline = true;
@@ -206,11 +269,7 @@
         return { ok: false, error: data.error || `HTTP ${data.statusCode}` };
       }
     } catch (err) {
-      state.serverOnline = false;
-      elements.statusDot.className = "status-dot status-offline";
-      elements.pingDisplay.textContent = "Error";
-      log(`Error contacting ping proxy: ${err.message}`, "error");
-      return { ok: false, error: err.message };
+      return await directPing();
     }
   }
 
@@ -240,13 +299,14 @@
   }
 
   async function callAuthEndpoint(authPayload) {
+    const isDirect = state.proxyMode === "direct" || isGitHubPages;
     const endpoint =
-      state.proxyMode === "direct"
+      isDirect
         ? ensureTrailingSlash(state.serverUrl) + "api/v1.9.2-beta/player/getinfo"
         : "/api/launcher/login";
 
     const body =
-      state.proxyMode === "direct"
+      isDirect
         ? authPayload
         : {
             serverUrl: state.serverUrl,
@@ -400,8 +460,9 @@
 
       elements.ruffleContainer.appendChild(player);
 
+      const swfUrl = new URL("swfs/bymr-client.swf?v=1.9.2-beta", window.location.href).href;
       elements.splashStatusText.textContent = "Loading BYMR client SWF (v1.9.2-beta)...";
-      await player.load(Object.assign({ url: "/swfs/bymr-client.swf?v=1.9.2-beta" }, ruffleConfig));
+      await player.load(Object.assign({ url: swfUrl }, ruffleConfig));
 
       elements.loadingSplash.classList.add("hidden");
       log("Client SWF loaded successfully in Ruffle", "success");
@@ -715,26 +776,40 @@
   elements.btnExitFullscreen.addEventListener("click", toggleFullscreen);
   elements.btnClearLogs.addEventListener("click", () => { elements.consoleLogs.innerHTML = ""; });
 
+  let initialized = false;
   async function init() {
+    if (initialized) return;
+    initialized = true;
     log("Initializing Backyard Monsters Refitted Web Launcher...", "info");
     applyScale(state.scale);
     updateAuthUI();
 
+    let hasBackend = false;
     try {
-      const configRes = await fetch("/api/launcher/config");
-      const config = await configRes.json();
-      state.runtimeName = config.runtime || "node";
-      state.proxyLabel = config.runtime === "netlify-edge" ? "Edge Proxy" : "Docker Proxy";
-      if (!localStorage.getItem("bymr_server_url") && config.defaultServerUrl) {
-        state.serverUrl = config.defaultServerUrl;
-        state.cdnUrl = config.defaultCdnUrl || config.defaultServerUrl;
-        if (state.serverUrl !== "https://server.bymrefitted.com/") {
-          state.preset = "custom";
+      const configRes = await fetch("./api/launcher/config").catch(() => null);
+      if (configRes && configRes.ok) {
+        const config = await configRes.json();
+        hasBackend = true;
+        state.runtimeName = config.runtime || "node";
+        state.proxyLabel = config.runtime === "netlify-edge" ? "Edge Proxy" : "Docker Proxy";
+        if (!localStorage.getItem("bymr_server_url") && config.defaultServerUrl) {
+          state.serverUrl = config.defaultServerUrl;
+          state.cdnUrl = config.defaultCdnUrl || config.defaultServerUrl;
+          if (state.serverUrl !== "https://server.bymrefitted.com/") {
+            state.preset = "custom";
+          }
         }
+        log(`Server config loaded (${state.runtimeName}). Default server: ${config.defaultServerUrl}`, "info");
       }
-      log(`Server config loaded (${state.runtimeName}). Default server: ${config.defaultServerUrl}`, "info");
     } catch (e) {
-      log("Notice: Could not fetch /api/launcher/config, using local defaults", "warn");
+      hasBackend = false;
+    }
+
+    if (!hasBackend) {
+      state.runtimeName = isGitHubPages ? "github-pages" : "static";
+      state.proxyLabel = "Direct Browser";
+      state.proxyMode = "direct";
+      log(`Static environment detected (${state.runtimeName}). Operating in Direct Connection mode.`, "info");
     }
 
     pingServer();
