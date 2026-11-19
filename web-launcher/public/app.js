@@ -19,17 +19,12 @@
     return saved;
   }
 
-  function resolveInitialProxyMode() {
-    const saved = localStorage.getItem("bymr_proxy_mode");
-    if (saved) return saved;
-    return isGitHubPages ? "direct" : "proxy";
-  }
-
   // Application State
   const state = {
     serverUrl: localStorage.getItem("bymr_server_url") || "https://server.bymrefitted.com/",
     cdnUrl: localStorage.getItem("bymr_cdn_url") || "https://cdn.bymrefitted.com/",
-    proxyMode: resolveInitialProxyMode(),
+    proxyMode: isGitHubPages ? "direct" : localStorage.getItem("bymr_proxy_mode") || "proxy",
+    canUseProxy: !isGitHubPages,
     token: localStorage.getItem("bymr_auth_token") || "",
     cfClientId: localStorage.getItem("bymr_cf_client_id") || "",
     cfClientSecret: localStorage.getItem("bymr_cf_client_secret") || "",
@@ -528,6 +523,8 @@
     elements.testResultText.textContent = "";
 
     elements.proxyRadios.forEach(r => {
+      r.disabled = r.value === "proxy" && !state.canUseProxy;
+      r.closest("label").classList.toggle("hidden", r.disabled);
       r.checked = r.value === state.proxyMode;
     });
 
@@ -617,8 +614,8 @@
     const newCfSecret = elements.inputCfClientSecret.value.trim();
     const newCustomHeader = elements.inputCustomAuthHeader.value.trim();
 
-    let selectedMode = "proxy";
-    elements.proxyRadios.forEach(r => { if (r.checked) selectedMode = r.value; });
+    const proxySelected = Array.from(elements.proxyRadios).some(r => r.checked && r.value === "proxy");
+    const selectedMode = state.canUseProxy && proxySelected ? "proxy" : "direct";
 
     if (!newServer) {
       alert("Please enter a valid server URL.");
@@ -782,13 +779,13 @@
   async function init() {
     if (initialized) return;
     initialized = true;
-    log("Initializing Backyard Monsters Refitted Web Launcher...", "info");
+    log(`Initializing Backyard Monsters Refitted Web Launcher (v${GAME_VERSION})...`, "info");
     applyScale(state.scale);
     updateAuthUI();
 
     let hasBackend = false;
     try {
-      const configRes = await fetch("./api/launcher/config").catch(() => null);
+      const configRes = isGitHubPages ? null : await fetch("./api/launcher/config");
       if (configRes && configRes.ok) {
         const config = await configRes.json();
         hasBackend = true;
@@ -808,6 +805,7 @@
     }
 
     if (!hasBackend) {
+      state.canUseProxy = false;
       state.runtimeName = isGitHubPages ? "github-pages" : "static";
       state.proxyLabel = "Direct Browser";
       state.proxyMode = "direct";
