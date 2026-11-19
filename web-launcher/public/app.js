@@ -2,6 +2,8 @@
 (function() {
   "use strict";
 
+  const GAME_VERSION = "1.9.3-beta";
+
   const isGitHubPages =
     typeof window !== "undefined" &&
     (window.location.hostname.endsWith(".github.io") ||
@@ -302,7 +304,7 @@
     const isDirect = state.proxyMode === "direct" || isGitHubPages;
     const endpoint =
       isDirect
-        ? ensureTrailingSlash(state.serverUrl) + "api/v1.9.2-beta/player/getinfo"
+        ? ensureTrailingSlash(state.serverUrl) + `api/v${GAME_VERSION}/player/getinfo`
         : "/api/launcher/login";
 
     const body =
@@ -460,8 +462,8 @@
 
       elements.ruffleContainer.appendChild(player);
 
-      const swfUrl = new URL("swfs/bymr-client.swf?v=1.9.2-beta", window.location.href).href;
-      elements.splashStatusText.textContent = "Loading BYMR client SWF (v1.9.2-beta)...";
+      const swfUrl = new URL(`swfs/bymr-client.swf?v=${GAME_VERSION}`, window.location.href).href;
+      elements.splashStatusText.textContent = `Loading BYMR client SWF (v${GAME_VERSION})...`;
       await player.load(Object.assign({ url: swfUrl }, ruffleConfig));
 
       elements.loadingSplash.classList.add("hidden");
