@@ -2,6 +2,8 @@
 (function() {
   "use strict";
 
+  const GAME_VERSION = "1.9.3-beta";
+
   function resolveInitialRenderer() {
     const saved = localStorage.getItem("bymr_renderer");
     if (!saved || saved === "webgl" || saved === "canvas") {
@@ -242,7 +244,7 @@
   async function callAuthEndpoint(authPayload) {
     const endpoint =
       state.proxyMode === "direct"
-        ? ensureTrailingSlash(state.serverUrl) + "api/v1.9.2-beta/player/getinfo"
+        ? ensureTrailingSlash(state.serverUrl) + `api/v${GAME_VERSION}/player/getinfo`
         : "/api/launcher/login";
 
     const body =
@@ -400,8 +402,8 @@
 
       elements.ruffleContainer.appendChild(player);
 
-      elements.splashStatusText.textContent = "Loading BYMR client SWF (v1.9.2-beta)...";
-      await player.load(Object.assign({ url: "/swfs/bymr-client.swf?v=1.9.2-beta" }, ruffleConfig));
+      elements.splashStatusText.textContent = `Loading BYMR client SWF (v${GAME_VERSION})...`;
+      await player.load(Object.assign({ url: `/swfs/bymr-client.swf?v=${GAME_VERSION}` }, ruffleConfig));
 
       elements.loadingSplash.classList.add("hidden");
       log("Client SWF loaded successfully in Ruffle", "success");
