@@ -2,7 +2,7 @@
 (function() {
   "use strict";
 
-  const GAME_VERSION = "1.9.3-beta";
+  const GAME_VERSION = "1.9.4-beta";
 
   function resolveInitialRenderer() {
     const saved = localStorage.getItem("bymr_renderer");

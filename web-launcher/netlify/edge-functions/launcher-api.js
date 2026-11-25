@@ -97,7 +97,7 @@ async function handleLogin(request, context) {
   const targetServer = (serverUrl || defaultServerUrl).replace(/\/$/, "");
 
   try {
-    const loginUrl = new URL(`${targetServer}/api/v1.9.3-beta/player/getinfo`);
+    const loginUrl = new URL(`${targetServer}/api/v1.9.4-beta/player/getinfo`);
     const gatewayHeaders = resolveGatewayHeaders(request, context, {
       cfClientId,
       cfClientSecret,
