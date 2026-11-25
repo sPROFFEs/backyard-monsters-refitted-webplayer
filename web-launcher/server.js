@@ -190,7 +190,7 @@ const jsonParser = express.json({ limit: "10mb" });
 app.post("/api/launcher/login", jsonParser, async (req, res) => {
   const { serverUrl, email, password, token, sessionType = "game", cfClientId, cfClientSecret, customAuthHeader } = req.body;
   const targetServer = (serverUrl || DEFAULT_SERVER_URL).replace(/\/$/, "");
-  const loginUrl = `${targetServer}/api/v1.9.3-beta/player/getinfo`;
+  const loginUrl = `${targetServer}/api/v1.9.4-beta/player/getinfo`;
   let settled = false;
 
   try {
